@@ -1,0 +1,13 @@
+{
+  "name": "SethCity 6769",
+  "short_name": "SethCity",
+  "description": "The whole city in your pocket. Build it, run it, wreck it.",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
