@@ -1,0 +1,9 @@
+# Signing material stays local — NEVER lose the .jks or installed apps can't update.
+keystore.properties
+*.jks
+.gradle/
+build/
+app/build/
+local.properties
+# The bundled game is generated from dist/ by `npm run apk`
+app/src/main/assets/www/
