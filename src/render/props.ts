@@ -345,6 +345,7 @@ export class PropRenderer {
   private roadList: number[] = [];
   private walkList: number[] = [];
   private boatAnchors: BoatAnchor[] = [];
+  private boatCandidates: number[] = [];
 
   private staticDirty = true;
   private staticTimer = 0;
@@ -531,7 +532,8 @@ export class PropRenderer {
     }
     const keep = want > 0 ? Math.min(1, TREE_CAP / want) : 1;
 
-    const boatCand: number[] = [];
+    const boatCand = this.boatCandidates;
+    boatCand.length = 0;
 
     for (let y = 0; y < GRID_H; y++) {
       for (let x = 0; x < GRID_W; x++) {
@@ -869,7 +871,7 @@ export class PropRenderer {
     const g = this.grid;
     for (let k = 0; k < active; k++) {
       const m = movers[k];
-      if (m.cur < 0 || !g.road[m.cur]) {
+      if (m.cur < 0 || !g.road[m.cur] || m.nxt < 0 || !g.road[m.nxt]) {
         if (!this.spawn(m, list, walker, kindMul)) {
           m.cur = -1;
           M.makeScale(0, 0, 0);

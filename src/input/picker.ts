@@ -33,7 +33,22 @@ export class Picker {
     dom.addEventListener('pointermove', this.onMove);
     dom.addEventListener('pointerup', this.onUp);
     dom.addEventListener('pointercancel', this.onCancel);
+    dom.addEventListener('contextmenu', this.onContext);
+    dom.addEventListener('pointerdown', this.onRightCancel, true);
   }
+
+  /** right-click while a build drag is in progress cancels the drag */
+  private onRightCancel = (e: PointerEvent) => {
+    if (e.button === 2 && this.pointer !== null) {
+      e.preventDefault();
+      e.stopPropagation();
+      this.abort();
+      this.host.sfx('click');
+    }
+  };
+
+  /** never show the browser context menu over the city canvas */
+  private onContext = (e: Event) => e.preventDefault();
 
   private onDown = (e: PointerEvent) => {
     if (this.pointer !== null || e.button !== 0 || this.host.overUI(e.clientX, e.clientY)) return;

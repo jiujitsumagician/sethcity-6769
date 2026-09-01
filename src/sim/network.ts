@@ -178,6 +178,18 @@ export function propagateUtilities(state: GameState): void {
       }
     }
   }
+  if (buyP > 0) {
+    for (let x = 0; x < GRID_W; x++) {
+      const top = x, bottom = (GRID_H - 1) * GRID_W + x;
+      if (conduct[top] && !reach[top]) { reach[top] = 1; queue[tail++] = top; }
+      if (conduct[bottom] && !reach[bottom]) { reach[bottom] = 1; queue[tail++] = bottom; }
+    }
+    for (let y = 1; y < GRID_H - 1; y++) {
+      const left = y * GRID_W, right = left + GRID_W - 1;
+      if (conduct[left] && !reach[left]) { reach[left] = 1; queue[tail++] = left; }
+      if (conduct[right] && !reach[right]) { reach[right] = 1; queue[tail++] = right; }
+    }
+  }
   while (head < tail) {
     const i = queue[head++];
     const x = i % GRID_W;
@@ -243,10 +255,11 @@ export function propagateUtilities(state: GameState): void {
     }
   }
 
-  /* stamp grid.powered: live conductors dilated by Chebyshev 3 — the same
-     reach as the road-access rule, so any zone tile that can grow (within 3
-     of a powered road) also reads powered. Separable dilation, then
-     per-building truth (brown-outs visible). */
+  /* stamp grid.powered: live conductors dilated by Chebyshev 3 — DELIBERATELY
+     matching the isConnected road-access radius, so every zone tile that is
+     allowed to grow (within 3 of a road) also reads powered. DO NOT reduce
+     this to a one-tile halo: interior zone tiles then never develop (this was
+     the launch-day zero-growth bug). Per-building truth stamped after. */
   const powered = grid.powered;
   for (let y = 0; y < GRID_H; y++) {
     const row = y * GRID_W;
@@ -324,6 +337,18 @@ export function propagateUtilities(state: GameState): void {
           }
         }
       }
+    }
+  }
+  if (buyW > 0) {
+    for (let x = 0; x < GRID_W; x++) {
+      const top = x, bottom = (GRID_H - 1) * GRID_W + x;
+      if (conduct[top] && !reach[top]) { reach[top] = 1; queue[tail++] = top; }
+      if (conduct[bottom] && !reach[bottom]) { reach[bottom] = 1; queue[tail++] = bottom; }
+    }
+    for (let y = 1; y < GRID_H - 1; y++) {
+      const left = y * GRID_W, right = left + GRID_W - 1;
+      if (conduct[left] && !reach[left]) { reach[left] = 1; queue[tail++] = left; }
+      if (conduct[right] && !reach[right]) { reach[right] = 1; queue[tail++] = right; }
     }
   }
   while (head < tail) {

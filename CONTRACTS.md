@@ -663,10 +663,13 @@ another module must honour.
 # INTEGRATION NOTES (facts already locked in by finished modules — honour these)
 
 From **A2** (sim/network.ts, services.ts, fields.ts, traffic.ts — DONE):
-- `grid.powered[i]` is 1 on live conductors AND a one-tile 4-neighbour halo, then
-  overridden per building footprint (browned-out buildings stamp 0). An empty zoned lot
-  beside a live road reads powered — zoning may test `grid.powered[i]` / `grid.watered[i]`
-  directly on 1×1 growth candidates.
+- `grid.powered[i]` is 1 within **Chebyshev 3** of any live conductor (deliberately the
+  same radius as the isConnected road-access rule — a zone tile allowed to grow must also
+  read powered; a one-tile halo causes the interior-zone zero-growth bug), then overridden
+  per building footprint (browned-out buildings stamp 0). Zoning may test
+  `grid.powered[i]` / `grid.watered[i]` directly on 1×1 growth candidates. Building
+  power-connection truth (bPow) still requires footprint overlap with the conduction
+  network itself.
 - `isConnected(grid,x,y)` = a road tile of the largest component within Chebyshev 3 —
   exactly the zoning road-access rule. Use it.
 - Zoning MUST stamp `grid.population` per residential tile (traffic reads it), initialise

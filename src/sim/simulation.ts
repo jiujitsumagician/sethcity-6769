@@ -9,7 +9,9 @@ import { growAndDecay } from './zoning';
 import { publishPaper } from './newspaper';
 import { updateDisasters } from './disasters';
 
-const RATES = [0, 1, 3, 9] as const;
+/* game-days per real second at each speed setting; player feedback tuned the
+   default (index 2) to a quarter of the original pace */
+const RATES = [0, 0.25, 0.75, 4] as const;
 
 export class Simulation {
   private accumulator = 0;

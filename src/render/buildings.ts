@@ -1637,8 +1637,12 @@ function bWatertower(s: GeoSink, c: Ctx) {
   }
   // classic elevated tank on legs
   s.disc(cx, cz, 0.016, 0.34, 9, shade(CONCRETE, 0.9));
-  const legH = c.ht * 0.55;
-  const tankH = c.ht * 0.3;
+  // Keep the catalog height as an overall silhouette budget.  A previous
+  // proportional split could turn bad/legacy height data into giant stilts.
+  const totalH = clamp(c.ht, 6, 9);
+  const legH = clamp(totalH * 0.48, 3, 4.25);
+  const tankH = clamp(totalH * 0.34, 2.1, 2.8);
+  const tankR = Math.min(c.w, c.h) * 0.31;
   const legC = shade(0x7d8288, 1);
   for (const [lx, lz] of [[-0.26, -0.26], [0.26, -0.26], [-0.26, 0.26], [0.26, 0.26]] as const) {
     s.bar(cx + lx, 0, cz + lz, cx + lx * 0.45, legH, cz + lz * 0.45, 0.028, 0.028, legC);
@@ -1648,11 +1652,12 @@ function bWatertower(s: GeoSink, c: Ctx) {
   s.bar(cx + 0.26, 0.05, cz - 0.26, cx - 0.12, legH * 0.55, cz - 0.12, 0.014, 0.014, legC);
   // riser + catwalk + tank + cap
   s.cyl(cx, cz, 0, legH, 0.05, 0.05, 7, shade(0x6a7075, 1), null);
-  s.cyl(cx, cz, legH - 0.04, legH, 0.34, 0.34, 9, shade(0x6a7075, 1), null);
+  s.cyl(cx, cz, legH - 0.04, legH, tankR + 0.04, tankR + 0.04, 12, shade(0x6a7075, 1), null);
   const tankHex = pal(c, 0, 0xc9cdd1);
-  s.cyl(cx, cz, legH, legH + tankH, 0.24, 0.3, 9, shade(tankHex, 1), null);
-  s.cyl(cx, cz, legH + tankH, legH + tankH + 0.1, 0.3, 0.3, 9, rgb(tankHex), null);
-  s.cyl(cx, cz, legH + tankH + 0.1, legH + tankH + 0.28, 0.3, 0.02, 9, shade(tankHex, 0.9), null);
+  s.cyl(cx, cz, legH, legH + tankH * 0.22, tankR * 0.72, tankR, 12, shade(tankHex, 0.92), null);
+  s.cyl(cx, cz, legH + tankH * 0.22, legH + tankH * 0.78, tankR, tankR, 12, shade(tankHex, 1), null);
+  s.cyl(cx, cz, legH + tankH * 0.78, legH + tankH, tankR, tankR * 0.62, 12, shade(tankHex, 0.94), null);
+  s.cyl(cx, cz, legH + tankH, legH + tankH + 0.18, tankR * 0.62, 0.02, 12, shade(tankHex, 0.88), null);
   if (s.collect && c.ht > 7) {
     const [wx, wy, wz] = s.toWorld(cx, legH + tankH + 0.34, cz);
     pendingAnims.push({ kind: AnimKind.Beacon, x: wx, y: wy, z: wz, yaw: 0, speed: 1, phase: hash2(c.seedI, 53, 3), scale: 0.16 });
@@ -2387,7 +2392,11 @@ function buildOne(s: GeoSink, grid: Grid, i: number, collect = true) {
     ht: Math.max(0.2, (def.height ?? 2.5) * variation),
     abandoned,
   };
-  s.setFrame(x, grid.height[i], z, def.w, def.h, grid.rotation[i]);
+  // A quarter-turn around the centre of a rectangular footprint moves geometry
+  // outside the tiles stamped by the simulation.  Preserve rotation only when
+  // it cannot change the occupied bounds.
+  const renderRotation = def.w === def.h ? grid.rotation[i] : 0;
+  s.setFrame(x, grid.height[i], z, def.w, def.h, renderRotation);
   s.collect = collect;
   const v0 = s.v;
   const anim0 = pendingAnims.length;
@@ -2567,7 +2576,11 @@ export class BuildingRenderer {
     this.sink.reset();
     pendingAnims = [];
     buildOne(this.sink, this.grid, origin, false);
-    if (!this.sink.v) return;
+    if (!this.sink.v) {
+      this.suppressed.delete(origin);
+      this.rebuildChunkInternal((tx(origin) / CHUNK) | 0, (ty(origin) / CHUNK) | 0, true);
+      return;
+    }
     const mesh = new THREE.Mesh(geometryFrom(this.sink), this.material);
     const def = defOf(this.grid.building[origin]);
     const cx = tx(origin) + def.w * 0.5;

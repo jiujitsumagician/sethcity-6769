@@ -1756,13 +1756,13 @@ input[type='range']::-moz-range-thumb {
     height: 28px;
   }
   .drawer.expanded .drawer-items {
-    max-height: 30vh;
+    max-height: min(30vh, 180px);
   }
   .sheet {
     left: auto;
     right: 0;
     width: min(100%, 420px);
-    max-height: 100%;
+    max-height: calc(100% - var(--sat) - var(--sab));
     border-radius: var(--r-lg) 0 0 var(--r-lg);
     border-bottom: 1px solid var(--line-strong);
     transform: translate(105%, 0);

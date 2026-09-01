@@ -25,6 +25,9 @@
         <div class="boot-tip">Shaping the land&hellip;</div>
       </div>
     </div>
+    <script>
+      setTimeout(()=>{const b=document.querySelector('#boot .boot-tip');if(b)b.textContent='Still loading. This device may not support WebGL—try updating your browser or using another device.'},20000);
+    </script>
     <script type="module" src="./src/main.ts"></script>
   </body>
 </html>

@@ -25,7 +25,7 @@ export class AudioEngine {
   get ready(): boolean { return this.ctx !== null; }
 
   unlock(): void {
-    if (this.ctx) { void this.ctx.resume(); return; }
+    if (this.ctx) { void this.ctx.resume().catch(() => undefined); return; }
     const Ctor = window.AudioContext ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!Ctor) return;
     const ctx = new Ctor(); this.ctx = ctx;
@@ -35,7 +35,7 @@ export class AudioEngine {
     this.noiseBuffer = this.makeNoise(false); this.brownBuffer = this.makeNoise(true);
     this.createAmbient();
     this.ramp(this.master.gain, this.muted ? 0 : 0.75, 0.08);
-    void ctx.resume();
+    void ctx.resume().catch(() => undefined);
   }
 
   private makeNoise(brown: boolean): AudioBuffer {
@@ -62,11 +62,11 @@ export class AudioEngine {
   }
 
   private tone(freq: number, start: number, duration: number, volume: number, type: OscillatorType = 'sine', destination = this.effects): void {
-    if (!this.ctx || !destination) return; const o = this.ctx.createOscillator(), g = this.ctx.createGain(); o.type = type; o.frequency.setValueAtTime(freq, start); g.gain.setValueAtTime(0.0001, start); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), start + Math.min(0.015, duration * 0.2)); g.gain.exponentialRampToValueAtTime(0.0001, start + duration); o.connect(g); g.connect(destination); o.start(start); o.stop(start + duration + 0.02);
+    if (!this.ctx || !destination) return; const o = this.ctx.createOscillator(), g = this.ctx.createGain(); o.type = type; o.frequency.setValueAtTime(freq, start); g.gain.setValueAtTime(0.0001, start); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), start + Math.min(0.015, duration * 0.2)); g.gain.exponentialRampToValueAtTime(0.0001, start + duration); o.connect(g); g.connect(destination); o.onended = () => { o.disconnect(); g.disconnect(); }; o.start(start); o.stop(start + duration + 0.02);
   }
 
   private noise(start: number, duration: number, volume: number, low: number, high: number, brown = false): void {
-    if (!this.ctx || !this.effects) return; const src = this.ctx.createBufferSource(), f = this.ctx.createBiquadFilter(), g = this.ctx.createGain(); src.buffer = brown ? this.brownBuffer : this.noiseBuffer; f.type = 'lowpass'; f.frequency.setValueAtTime(low, start); f.frequency.exponentialRampToValueAtTime(Math.max(20, high), start + duration); g.gain.setValueAtTime(0.0001, start); g.gain.exponentialRampToValueAtTime(volume, start + duration * 0.25); g.gain.exponentialRampToValueAtTime(0.0001, start + duration); src.connect(f); f.connect(g); g.connect(this.effects); src.start(start); src.stop(start + duration + 0.02);
+    if (!this.ctx || !this.effects) return; const src = this.ctx.createBufferSource(), f = this.ctx.createBiquadFilter(), g = this.ctx.createGain(); src.buffer = brown ? this.brownBuffer : this.noiseBuffer; f.type = 'lowpass'; f.frequency.setValueAtTime(low, start); f.frequency.exponentialRampToValueAtTime(Math.max(20, high), start + duration); g.gain.setValueAtTime(0.0001, start); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), start + duration * 0.25); g.gain.exponentialRampToValueAtTime(0.0001, start + duration); src.connect(f); f.connect(g); g.connect(this.effects); src.onended = () => { src.disconnect(); f.disconnect(); g.disconnect(); }; src.start(start); src.stop(start + duration + 0.02);
   }
 
   sfx(name: SfxName, volume = 1): void {

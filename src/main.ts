@@ -110,7 +110,15 @@ const host = {
     renderer.setQuality(q);
   },
   async save() {
-    if (world) await saveGame(world.state);
+    if (!world) return;
+    const ok = await saveGame(world.state);
+    if (!ok)
+      bus.emit('news', {
+        id: world.state.nextNewsId++,
+        tick: world.state.time.ticks,
+        text: 'Save failed — storage is full or unavailable.',
+        kind: 'bad',
+      });
   },
   async load(slot: string) {
     const s = await loadGame(slot);

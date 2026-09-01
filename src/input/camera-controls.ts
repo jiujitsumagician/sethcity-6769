@@ -167,7 +167,7 @@ export class CameraController {
     if (this.dom.hasPointerCapture(e.pointerId)) this.dom.releasePointerCapture(e.pointerId);
     if (this.pointers.size >= 2) this.initPair();
     else if (this.pointers.size === 1) {
-      const p = [...this.pointers.values()][0]; this.lastX = p.x; this.lastY = p.y; this.grab = null;
+      const p = [...this.pointers.values()][0]; this.lastX = p.x; this.lastY = p.y; this._gesturing = false; this.grab = this.enabled ? this.screenToGround(p.x,p.y) : null;
     } else { this._gesturing = false; this.grab = null; }
   };
 
@@ -179,7 +179,10 @@ export class CameraController {
     this.distance = this.desiredDistance;
     this.recomputeCamera();
     const after = this.screenToGround(e.clientX, e.clientY);
-    if (before && after) { this.desiredX += before.x - after.x; this.desiredZ += before.z - after.z; }
+    if (before && after) {
+      const dx=before.x-after.x,dz=before.z-after.z;
+      if(Number.isFinite(dx)&&Number.isFinite(dz)){this.desiredX=THREE.MathUtils.clamp(this.desiredX+dx,-MARGIN,GRID_W+MARGIN);this.desiredZ=THREE.MathUtils.clamp(this.desiredZ+dz,-MARGIN,GRID_H+MARGIN);}
+    }
   };
 
   zoomBy(factor: number): void { this.desiredDistance = THREE.MathUtils.clamp(this.desiredDistance * factor, MIN_DIST, MAX_DIST); }

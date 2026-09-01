@@ -22,8 +22,9 @@ function pick(zone: number, level: number, salt: number, state: GameState, o: nu
 function stamp(state: GameState, o: number, d: BuildingDef, condition: number, age: number): void {
   const g = state.grid, ox = o % GRID_W, oy = (o / GRID_W) | 0;
   const fill = Math.min(1, age / (10 + (hash2(ox, oy, 19) * 20 | 0)));
-  const perPop = Math.round(d.residents * fill / (d.w * d.h)), perJobs = Math.round(d.jobs * fill / (d.w * d.h));
-  for (let y = 0; y < d.h; y++) for (let x = 0; x < d.w; x++) { const i = (oy + y) * GRID_W + ox + x; g.building[i] = d.id; g.originOffset[i] = x | y << 4; g.level[i] = d.level ?? 1; g.variant[i] = (hash2(ox, oy, d.id) * 255) | 0; g.condition[i] = condition; g.age[i] = age; g.population[i] = perPop; g.jobs[i] = perJobs; }
+  const tiles = d.w * d.h;
+  const totalPop = Math.round(d.residents * fill), totalJobs = Math.round(d.jobs * fill);
+  for (let y = 0; y < d.h; y++) for (let x = 0; x < d.w; x++) { const i = (oy + y) * GRID_W + ox + x, n = y * d.w + x; g.building[i] = d.id; g.originOffset[i] = x | y << 4; g.level[i] = d.level ?? 1; g.variant[i] = (hash2(ox, oy, d.id) * 255) | 0; g.condition[i] = condition; g.age[i] = age; g.population[i] = Math.floor((totalPop + tiles - 1 - n) / tiles); g.jobs[i] = Math.floor((totalJobs + tiles - 1 - n) / tiles); }
 }
 function replace(state: GameState, o: number, d: BuildingDef): void { stamp(state, o, d, 180, 0); state.grid.markDirty(o % GRID_W, (o / GRID_W) | 0); bus.emit('tile:changed', { i: o }); }
 
@@ -32,11 +33,25 @@ export function growAndDecay(state: GameState): void {
   for (let i = 0; i < TILE_COUNT; i++) {
     const id = g.building[i];
     if (id && !g.originOffset[i]) {
-      const d = defOf(id); if (!d.grown) continue;
+      const d = defOf(id);
+      if (!d.grown) {
+        /* Player-placed residential rewards and arcologies fill over time,
+           matching zoned housing instead of adding thousands instantly. */
+        if (d.residents > 0) {
+          const fillTicks = 10 + (hash2(i % GRID_W, (i / GRID_W) | 0, 19) * 20 | 0);
+          /* Old saves may contain fully populated, age-zero placed housing. */
+          const age = g.age[i] === 0 && g.population[i] > 0 ? fillTicks : Math.min(65535, g.age[i] + 1);
+          stamp(state, i, d, g.condition[i], age);
+        }
+        continue;
+      }
       const x = i % GRID_W, y = (i / GRID_W) | 0, good = isConnected(g, x, y) && !!g.powered[i] && !!g.watered[i] && demandFor(state, d.zone ?? 0) > -0.05 && g.landValue[i] >= (d.minLandValue ?? 0);
       let age = Math.min(65535, g.age[i] + 1), condition = g.condition[i];
+      const wasAlive = condition > 0;
       if (good) condition = Math.min(255, condition + 3); else condition = Math.max(0, condition - 5);
       stamp(state, i, d, condition, age);
+      /* abandonment (and recovery) changes the building's look — rebuild its chunk */
+      if (wasAlive !== condition > 0) { g.markDirty(x, y); bus.emit('tile:changed', { i }); }
       if (good && condition > 235 && age > 150 && hash2(x, y, state.time.ticks) < 0.025) { const next = pick(d.zone ?? 0, (d.level ?? 1) + 1, age, state, i, false); if (next) replace(state, i, next); }
       else if (!good && condition === 0 && age > 90 && (d.level ?? 1) > 1) { const prev = pick(d.zone ?? 0, (d.level ?? 1) - 1, age, state, i, false); if (prev) replace(state, i, prev); }
       else if (good && condition === 0 && age > 4) { const rebuilt = pick(d.zone ?? 0, 1, age, state, i, false); replace(state, i, rebuilt ?? d); }

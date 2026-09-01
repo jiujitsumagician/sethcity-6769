@@ -420,6 +420,7 @@ export class RoadRenderer {
   private meshes: (THREE.Mesh | null)[];
   private material: THREE.MeshLambertMaterial;
   private uNight = { value: 0 };
+  private bridgeQueued = new Set<number>();
 
   constructor(scene: THREE.Scene, grid: Grid) {
     this.scene = scene;
@@ -452,14 +453,21 @@ export class RoadRenderer {
 
   rebuildChunk(cx: number, cy: number): void {
     this.buildChunk(cx, cy);
+    const ci = cy * CHUNKS_X + cx;
+    if (this.bridgeQueued.delete(ci)) return;
     // a bridge span's arch depends on tiles that may live in neighbouring
     // chunks — when this chunk holds any bridge tile, refresh its neighbours
     // so deck heights stay continuous across chunk borders.
     if (this.chunkHasBridge(cx, cy)) {
-      if (cx > 0) this.buildChunk(cx - 1, cy);
-      if (cx < CHUNKS_X - 1) this.buildChunk(cx + 1, cy);
-      if (cy > 0) this.buildChunk(cx, cy - 1);
-      if (cy < CHUNKS_Y - 1) this.buildChunk(cx, cy + 1);
+      const enqueue = (n: number) => {
+        if (n === ci || this.grid.dirtyChunks.has(n)) return;
+        this.bridgeQueued.add(n);
+        this.grid.dirtyChunks.add(n);
+      };
+      if (cx > 0) enqueue(cy * CHUNKS_X + cx - 1);
+      if (cx < CHUNKS_X - 1) enqueue(cy * CHUNKS_X + cx + 1);
+      if (cy > 0) enqueue((cy - 1) * CHUNKS_X + cx);
+      if (cy < CHUNKS_Y - 1) enqueue((cy + 1) * CHUNKS_X + cx);
     }
   }
 
@@ -469,6 +477,7 @@ export class RoadRenderer {
 
   dispose(): void {
     for (let i = 0; i < this.meshes.length; i++) this.removeMesh(i);
+    this.bridgeQueued.clear();
     this.material.dispose();
   }
 
@@ -1019,6 +1028,7 @@ export class RoadRenderer {
 
   private wireTile(acc: Acc, x: number, y: number): void {
     const g = this.grid;
+    if (!this.isPylonTile(x, y)) return;
     const a = this.pylonAttach(x, y);
     const cx = x + 0.5;
     const cz = y + 0.5;
@@ -1056,9 +1066,47 @@ export class RoadRenderer {
       acc.bar(cx - 0.33, a.arm, cz, cx + 0.33, a.arm, cz, 0.026, C_PYLON, shade);
     acc.bar(cx, a.arm, cz, cx, a.top + 0.16, cz, 0.018, C_PYLON, shade);
 
-    // catenary spans east + south (each span drawn once, by its west/north end)
-    if (connE) this.span(acc, x, y, x + 1, y, 0);
-    if (connS) this.span(acc, x, y, x, y + 1, 1);
+    // Spans are owned by their west/north pylon and may cross chunk boundaries.
+    // Search only three tiles: periodic towers plus structural endpoints ensure
+    // that every straight run is covered without a per-tile picket fence.
+    if (connE) {
+      for (let d = 1; d <= 3 && wireAt(g, x + d, y); d++)
+        if (this.isPylonTile(x + d, y)) { this.span(acc, x, y, x + d, y, 0); break; }
+    }
+    if (connS) {
+      for (let d = 1; d <= 3 && wireAt(g, x, y + d); d++)
+        if (this.isPylonTile(x, y + d)) { this.span(acc, x, y, x, y + d, 1); break; }
+    }
+  }
+
+  private isPylonTile(x: number, y: number): boolean {
+    const g = this.grid;
+    if (!wireAt(g, x, y)) return false;
+    const e = wireAt(g, x + 1, y), w = wireAt(g, x - 1, y);
+    const n = wireAt(g, x, y - 1), s = wireAt(g, x, y + 1);
+    const degree = Number(e) + Number(w) + Number(n) + Number(s);
+    // endpoints, corners and junctions always carry a tower
+    if (degree !== 2 || !((e && w) || (n && s))) return true;
+    const wet = g.water[idx(x, y)] === 1;
+    for (const [nx, ny, connected] of [[x + 1, y, e], [x - 1, y, w], [x, y - 1, n], [x, y + 1, s]] as const)
+      if (connected && (g.water[idx(nx, ny)] === 1) !== wet) return true;
+    // Anchor the cadence to the preceding structural tower so arbitrary runs
+    // still end with a short, properly supported final span.
+    const dx = e && w ? -1 : 0;
+    const dy = n && s ? -1 : 0;
+    let distance = 0;
+    let px = x, py = y;
+    while (distance < 3) {
+      px += dx; py += dy; distance++;
+      if (!wireAt(g, px, py)) return false;
+      const pe = wireAt(g, px + 1, py), pw = wireAt(g, px - 1, py);
+      const pn = wireAt(g, px, py - 1), ps = wireAt(g, px, py + 1);
+      const pd = Number(pe) + Number(pw) + Number(pn) + Number(ps);
+      const straight = pd === 2 && ((pe && pw) || (pn && ps));
+      const waterTransition = (g.water[idx(px, py)] === 1) !== wet;
+      if (!straight || waterTransition) return distance === 3;
+    }
+    return true;
   }
 
   private span(
@@ -1071,7 +1119,8 @@ export class RoadRenderer {
     const offX = axis === 0 ? 0 : 0.3;
     const offZ = axis === 0 ? 0.3 : 0;
     const SEGS = 6;
-    const sag = 0.2;
+    const spanLength = Math.abs(xb - xa) + Math.abs(yb - ya);
+    const sag = 0.16 + spanLength * 0.11;
     for (const s of [-1, 1]) {
       let px = ax + offX * s;
       let pz = az + offZ * s;

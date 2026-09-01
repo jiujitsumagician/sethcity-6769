@@ -33,6 +33,10 @@ export function computeDemand(state: GameState): void {
     else if (o.key === 'clean_air') ind -= 0.16;
     else if (o.key === 'legalise_gambling') c += 0.08;
   }
+  /* Default taxes otherwise put a frontier city's commercial demand just
+     below zero. Once residents exist, preserve a small storefront market so
+     the first commercial lot can bootstrap jobs instead of waiting months. */
+  if (stats.population > 0) c = Math.max(c, 0.08);
   state.demand.r = Math.max(-1, Math.min(1, r));
   state.demand.c = Math.max(-1, Math.min(1, c));
   state.demand.i = Math.max(-1, Math.min(1, ind));

@@ -465,7 +465,8 @@ export class Renderer {
       this.bodyDir.copy(_sunDir);
     } else {
       this.sun.color.copy(MOON_LIGHT);
-      this.sun.intensity = sstep(0, 0.12, -elev) * 0.42 * (1 - dim * 0.6);
+      /* "gameplay night": bright moonlight so the city stays fully playable */
+      this.sun.intensity = sstep(0, 0.12, -elev) * 0.62 * (1 - dim * 0.6);
       this.bodyDir.copy(_moonDir);
     }
 
@@ -473,7 +474,7 @@ export class Renderer {
     _c2.copy(DAY_SKY).multiply(seasonC);
     this.hemi.color.copy(NIGHT_SKY).lerp(_c2, dayness);
     this.hemi.groundColor.copy(NIGHT_GROUND).lerp(DAY_GROUND, dayness);
-    this.hemi.intensity = (0.34 + 0.42 * dayness) * (1 - dim * 0.35);
+    this.hemi.intensity = (0.5 + 0.28 * dayness) * (1 - dim * 0.35);
 
     /* sky dome colours */
     _c2.copy(DAY_ZEN).multiply(seasonC);

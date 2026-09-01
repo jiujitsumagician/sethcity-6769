@@ -30,7 +30,7 @@ export class Actions {
     if (this.state.difficulty !== 'sandbox' && this.state.budget.funds < cost) return { ok: false, cost, reason: 'Insufficient funds', tiles: 0 };
     return { ok: true, cost, tiles: d.w * d.h };
   }
-  private stamp(d: BuildingDef, x: number, y: number): void { const g = this.state.grid, variant = ((x * 37 + y * 71 + this.state.seed) & 255), rotation = ((x + y + this.state.seed) & 3); for (let yy = 0; yy < d.h; yy++) for (let xx = 0; xx < d.w; xx++) { const i = idx(x + xx, y + yy); g.building[i] = d.id; g.originOffset[i] = xx | yy << 4; g.level[i] = d.level ?? 1; g.variant[i] = variant; g.rotation[i] = rotation; g.condition[i] = 255; g.age[i] = 0; g.population[i] = Math.round(d.residents / (d.w * d.h)); g.jobs[i] = Math.round(d.jobs / (d.w * d.h)); g.markDirty(x + xx, y + yy); } bus.emit('tile:changed', { i: idx(x, y) }); }
+  private stamp(d: BuildingDef, x: number, y: number): void { const g = this.state.grid, variant = ((x * 37 + y * 71 + this.state.seed) & 255), rotation = d.w === d.h ? ((x + y + this.state.seed) & 3) : 0; for (let yy = 0; yy < d.h; yy++) for (let xx = 0; xx < d.w; xx++) { const i = idx(x + xx, y + yy); g.building[i] = d.id; g.originOffset[i] = xx | yy << 4; g.level[i] = d.level ?? 1; g.variant[i] = variant; g.rotation[i] = rotation; g.condition[i] = 255; g.age[i] = 0; g.population[i] = 0; g.jobs[i] = d.residents > 0 ? 0 : Math.round(d.jobs / (d.w * d.h)); g.markDirty(x + xx, y + yy); } bus.emit('tile:changed', { i: idx(x, y) }); }
   place(key: string, x: number, y: number): ToolResult { const r = this.canPlace(key, x, y); if (!r.ok) return r; const d = BY_KEY[key]; if (d.needsFlat && !this.state.grid.isFlat(x, y, d.w, d.h) && !flattenFor(this.state.grid, x, y, d.w, d.h)) return { ...r, ok: false, reason: 'Terrain cannot be flattened' }; if (!this.spend(r.cost)) return { ...r, ok: false, reason: 'Insufficient funds' }; this.stamp(d, x, y); bus.emit('money:spent', { amount: r.cost, x, y, label: d.name }); return r; }
   bulldozeTile(x: number, y: number): number { const g = this.state.grid; if (!inBounds(x, y)) return 0; const o = g.originOf(x, y); let changed = 0; if (o >= 0) { const d = defOf(g.building[o]); const ox = o % GRID_W, oy = (o / GRID_W) | 0; const w = d.w, h = d.h; for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) { g.clearTile(idx(ox + xx, oy + yy)); g.markDirty(ox + xx, oy + yy); changed++; } bus.emit('tile:changed', { i: o }); return changed; } const i = idx(x, y); if (g.road[i] || g.rail[i] || g.wire[i] || g.pipe[i] || g.subway[i] || g.zone[i] || g.tree[i]) { g.road[i] = g.rail[i] = g.wire[i] = g.pipe[i] = g.subway[i] = g.tunnel[i] = g.zone[i] = g.tree[i] = 0; g.markDirty(x, y); bus.emit('tile:changed', { i }); return 1; } return 0; }
   applyTool(tool: ToolId, x0: number, y0: number, x1: number, y1: number, preview: boolean): ToolResult {
@@ -48,6 +48,8 @@ export class Actions {
         return { ok: false, cost: 0, reason: 'Building in the way', tiles: 0 };
       if (tool === 'water_place' && (g.road[i] || g.rail[i]))
         return { ok: false, cost: 0, reason: 'Transport route in the way', tiles: 0 };
+      if (tool.startsWith('terrain_') && (g.building[i] || g.road[i] || g.rail[i]))
+        return { ok: false, cost: 0, reason: 'Clear the site before reshaping terrain', tiles: 0 };
     }
     /* zone/tree rects paint around obstacles (SC2K-style) instead of refusing */
     if (tool.startsWith('zone_') || tool === 'tree') {

@@ -122,15 +122,37 @@ async function idbGet(slot: string): Promise<string | null> {
   db.close(); return value;
 }
 
-export async function saveGame(state: GameState, slot = 'auto'): Promise<void> {
-  const data = serialize(state);
-  try { await idbPut(slot, data); } catch { localStorage.setItem(PREFIX + slot, data); }
+function localGet(slot: string): string | null {
+  try { return localStorage.getItem(PREFIX + slot); } catch { return null; }
+}
+
+function localPut(slot: string, data: string): boolean {
+  try {
+    localStorage.setItem(PREFIX + slot, data);
+    return true;
+  } catch {
+    // Replacing an autosave can temporarily exceed some WebView quota implementations.
+    if (slot === 'auto') {
+      try {
+        localStorage.removeItem(PREFIX + slot);
+        localStorage.setItem(PREFIX + slot, data);
+        return true;
+      } catch { /* storage unavailable or save still exceeds quota */ }
+    }
+    return false;
+  }
+}
+
+export async function saveGame(state: GameState, slot = 'manual'): Promise<boolean> {
+  let data: string;
+  try { data = serialize(state); } catch { return false; }
+  try { await idbPut(slot, data); return true; } catch { return localPut(slot, data); }
 }
 
 export async function loadGame(slot: string): Promise<GameState | null> {
   let data: string | null = null;
   try { data = await idbGet(slot); } catch { /* fallback below */ }
-  data ??= localStorage.getItem(PREFIX + slot);
+  data ??= localGet(slot);
   if (!data) return null;
   try { return deserialize(data); } catch { return null; }
 }
@@ -141,7 +163,9 @@ export async function listSaves(): Promise<SaveMeta[]> {
     const db = await openDb();
     await new Promise<void>((resolve, reject) => { const req = db.transaction(STORE).objectStore(STORE).openCursor(); req.onsuccess = () => { const c = req.result; if (!c) { resolve(); return; } if (typeof c.value === 'string') values.set(String(c.key), c.value); c.continue(); }; req.onerror = () => reject(req.error); }); db.close();
   } catch { /* local-only environment */ }
-  for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k?.startsWith(PREFIX)) { const v = localStorage.getItem(k); if (v) values.set(k.slice(PREFIX.length), v); } }
+  try {
+    for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k?.startsWith(PREFIX)) { const v = localStorage.getItem(k); if (v) values.set(k.slice(PREFIX.length), v); } }
+  } catch { /* storage unavailable */ }
   const result: SaveMeta[] = [];
   for (const [slot, data] of values) try { const e = JSON.parse(data) as Envelope; result.push({ slot, ...e.meta }); } catch { /* ignore corrupt slots */ }
   return result.sort((a, b) => b.date - a.date);
@@ -149,7 +173,7 @@ export async function listSaves(): Promise<SaveMeta[]> {
 
 export async function deleteSave(slot: string): Promise<void> {
   try { const db = await openDb(); await new Promise<void>((resolve, reject) => { const tx = db.transaction(STORE, 'readwrite'); tx.objectStore(STORE).delete(slot); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); }); db.close(); } catch { /* fallback still removed */ }
-  localStorage.removeItem(PREFIX + slot);
+  try { localStorage.removeItem(PREFIX + slot); } catch { /* storage unavailable */ }
 }
 
 export async function hasAutosave(): Promise<boolean> { return (await loadGame('auto')) !== null; }
