@@ -136,7 +136,7 @@ def({ key: 'ih3', name: 'Refinery', category: 'industrial', archetype: 'refinery
 def({ key: 'ih4', name: 'Steelworks', category: 'industrial', archetype: 'refinery', grown: true, zone: Zone.IndHeavy, level: 4, jobs: 220, power: 40, water: 30, pollution: 230, noise: 130, height: 9.5, palette: [0x8a6b5a, 0x5d4a3f, 0x36302b] });
 
 /* ─────────────────────────────────── power ───────────────────────────────── */
-def({ key: 'p_wind', name: 'Wind Turbine', category: 'power', archetype: 'windturbine', w: 1, h: 1, cost: 4500, upkeep: 40, powerOut: 12, pollution: 0, noise: 20, height: 14, desc: 'Clean but modest output. Better on hills.' });
+def({ key: 'p_wind', name: 'Wind Turbine', category: 'power', archetype: 'windturbine', w: 1, h: 1, cost: 4500, upkeep: 40, powerOut: 12, pollution: 0, noise: 20, height: 5.5, desc: 'Clean but modest output. Better on hills.' });
 def({ key: 'p_solar', name: 'Solar Farm', category: 'power', archetype: 'solarfarm', w: 3, h: 3, cost: 22000, upkeep: 180, powerOut: 95, pollution: 0, noise: 0, height: 1.0, needsFlat: true, unlockPop: 500, desc: 'Silent, clean, needs a lot of flat land.' });
 def({ key: 'p_coal', name: 'Coal Plant', category: 'power', archetype: 'powerplant', w: 4, h: 4, cost: 16000, upkeep: 420, powerOut: 320, pollution: 250, noise: 120, height: 9, needsFlat: true, desc: 'Cheap power. Filthy.' });
 def({ key: 'p_gas', name: 'Gas Plant', category: 'power', archetype: 'powerplant', w: 4, h: 4, cost: 30000, upkeep: 560, powerOut: 480, pollution: 120, noise: 90, height: 8, needsFlat: true, unlockPop: 2000, desc: 'Cleaner than coal, pricier.' });
