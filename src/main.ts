@@ -175,6 +175,11 @@ const host = {
 /* ───────────────────────────── bus wiring ─────────────────────────────── */
 
 bus.on('shake', ({ intensity }) => renderer.shake(intensity));
+
+/* test/debug hook — read-only view of the live state */
+Object.defineProperty(window, '__sethcity', {
+  get: () => (world ? { state: world.state, sim: world.sim, actions: world.actions } : null),
+});
 bus.on('tile:changed', ({ i }) => {
   if (!world) return;
   const g = world.state.grid;

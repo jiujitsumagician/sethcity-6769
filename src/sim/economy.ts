@@ -9,11 +9,15 @@ const taxYield = (s: GameState) => s.difficulty === 'easy' ? 1.25 : s.difficulty
 
 export function computeDemand(state: GameState): void {
   const { stats, budget } = state;
+  /* feedback terms fade in with city size — a frontier town must be able to
+     bootstrap (first homes arrive before the first job exists) without the
+     jobs/unemployment coupling strangling demand at population ≈ 0 */
+  const maturity = Math.min(1, stats.population / 2500);
   const jobsPerResident = stats.population ? stats.jobs / stats.population : 0.55;
   const housingPressure = stats.jobs ? stats.population / Math.max(1, stats.jobs * 1.8) : 0;
-  let r = 0.62 + (jobsPerResident - 0.48) * 0.9 - budget.taxRes * 3.8 - stats.pollution * 0.22;
-  let c = 0.28 + stats.population / Math.max(1200, stats.comBuildings * 1700 + 1200) - housingPressure * 0.18 - budget.taxCom * 3.5;
-  let ind = 0.42 + housingPressure * 0.25 - stats.unemployment * 0.55 - budget.taxInd * 3.2;
+  let r = 0.62 + (jobsPerResident - 0.48) * 0.9 * maturity - budget.taxRes * 3.8 - stats.pollution * 0.22;
+  let c = 0.28 + stats.population / Math.max(1200, stats.comBuildings * 1700 + 1200) - housingPressure * 0.18 * maturity - budget.taxCom * 3.5;
+  let ind = 0.42 + housingPressure * 0.25 - Math.max(0, stats.unemployment - 0.15) * 0.55 * maturity - budget.taxInd * 3.2;
   let seaport = false;
   let airport = false;
   for (let i = 0; i < TILE_COUNT; i++) {

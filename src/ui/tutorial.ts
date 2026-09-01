@@ -18,7 +18,8 @@ export class Tutorial {
   constructor(root:HTMLElement,private readonly state:()=>GameState){
     this.card=document.createElement('aside');this.card.className='coach-card';this.card.dataset.ui='';this.card.innerHTML='<div class="step-no"></div><h4></h4><p></p><div class="coach-foot"><div class="coach-dots"></div><button class="coach-skip">Skip tutorial</button></div>';root.append(this.card);
     this.card.querySelector('button')!.onclick=()=>this.finish();
-    if(localStorage.getItem('sethcity:tutorial')==='done')this.card.hidden=true;else this.render();
+    if(localStorage.getItem('sethcity:tutorial')==='done'){this.card.hidden=true;this.step=steps.length;return;}
+    this.render();
     this.offs.push(bus.on('tool:changed',({tool})=>{if(this.step===0&&tool.startsWith('road_'))this.next();else if(this.step===1&&tool.startsWith('zone_res'))this.next();else if(this.step===2&&tool.startsWith('build_p_'))this.next();else if(this.step===3&&(tool==='wire'||tool.startsWith('road_')))this.next();else if(this.step===4&&tool.startsWith('zone_com'))this.next();}),bus.on('tile:changed',({i})=>{if(this.step===5&&this.state().grid.building[i])this.next();}),bus.on('speed:changed',({speed})=>{if(this.step===6&&speed>0)this.finish();}));
   }
   dispose():void{this.offs.forEach(o=>o());this.card.remove();}

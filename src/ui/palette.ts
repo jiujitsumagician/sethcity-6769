@@ -42,17 +42,33 @@ export class Palette {
     const defs: Item[]=PLACEABLE.map(d=>({tool:`build_${d.key}`,name:d.name,cost:d.cost,category:d.category,desc:d.desc??`${d.name}, ${d.w}×${d.h} tiles.`,archetype:d.archetype,unlockPop:d.unlockPop,key:d.key}));
     return [...tools,...defs];
   }
+  private builtFor: string | null = null;
   private refreshItems(): void {
-    const grid=this.q('.drawer-items'); grid.innerHTML=''; if(!this.active)return;
-    const s=this.state(); this.allItems().filter(i=>i.category===this.active).forEach(item=>{
+    const grid=this.q('.drawer-items'); if(!this.active){ grid.innerHTML=''; this.builtFor=null; return; }
+    const s=this.state();
+    const items=this.allItems().filter(i=>i.category===this.active);
+    /* Rebuild DOM only when the category (or lock set) changes — stats/budget
+       events fire every tick and a full rebuild would detach buttons mid-tap. */
+    const sig=this.active+'|'+items.map(i=>this.isUnlocked(i,s)?1:0).join('');
+    if(this.builtFor!==sig){
+      this.builtFor=sig; grid.innerHTML='';
+      items.forEach(item=>{
+        const b=document.createElement('button'); b.className='d-item'; b.dataset.tool=item.tool;
+        b.innerHTML=`<span class="ic">${glyph(item.archetype)}</span><span class="nm"></span><span class="cost">${item.cost?`§${item.cost.toLocaleString()}`:'Free'}</span><span class="d-lock" hidden>${item.unlockPop?.toLocaleString()??'Reward'}</span>`;
+        (b.querySelector('.nm') as HTMLElement).textContent=item.name;
+        b.onclick=()=>{ if(b.classList.contains('poor')){ bus.emit('money:denied',{reason:'Not enough funds'}); } else if(!b.classList.contains('locked')) this.select(item.tool,item.name); };
+        const show=(e:PointerEvent)=>{this.pressTimer=window.setTimeout(()=>this.describe(item,b),520); b.setPointerCapture?.(e.pointerId);};
+        b.addEventListener('pointerdown',show); ['pointerup','pointercancel','pointermove'].forEach(k=>b.addEventListener(k,()=>clearTimeout(this.pressTimer)));
+        grid.append(b);
+      });
+    }
+    /* light pass: update state classes in place */
+    const byTool=new Map(items.map(i=>[i.tool,i] as const));
+    grid.querySelectorAll<HTMLButtonElement>('.d-item').forEach(b=>{
+      const item=byTool.get(b.dataset.tool as Item['tool']); if(!item)return;
       const locked=!this.isUnlocked(item,s); const poor=s.difficulty!=='sandbox'&&item.cost>s.budget.funds;
-      const b=document.createElement('button'); b.className=`d-item${locked?' locked':''}${poor?' poor':''}${s.tool===item.tool?' sel':''}`; b.disabled=locked;
-      b.innerHTML=`<span class="ic">${glyph(item.archetype)}</span><span class="nm"></span><span class="cost">${item.cost?`§${item.cost.toLocaleString()}`:'Free'}</span>${locked?`<span class="d-lock">${item.unlockPop?.toLocaleString()??'Reward'}</span>`:''}`;
-      (b.querySelector('.nm') as HTMLElement).textContent=item.name;
-      b.onclick=()=>{ if(!poor)this.select(item.tool,item.name); else bus.emit('money:denied',{reason:'Not enough funds'}); };
-      const show=(e:PointerEvent)=>{this.pressTimer=window.setTimeout(()=>this.describe(item,b),520); b.setPointerCapture?.(e.pointerId);};
-      b.addEventListener('pointerdown',show); ['pointerup','pointercancel','pointermove'].forEach(k=>b.addEventListener(k,()=>clearTimeout(this.pressTimer)));
-      grid.append(b);
+      b.classList.toggle('locked',locked); b.classList.toggle('poor',poor); b.classList.toggle('sel',s.tool===item.tool);
+      b.disabled=locked; (b.querySelector('.d-lock') as HTMLElement).hidden=!locked;
     });
   }
   private isUnlocked(item: Item,s:GameState): boolean { if(s.difficulty==='sandbox'||!item.unlockPop)return !item.key||!item.key.startsWith('x_')||item.cost>0||s.unlocked.has(item.key); return s.stats.population>=item.unlockPop||!!item.key&&s.unlocked.has(item.key); }

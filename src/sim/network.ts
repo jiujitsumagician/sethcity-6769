@@ -243,21 +243,38 @@ export function propagateUtilities(state: GameState): void {
     }
   }
 
-  /* stamp grid.powered: live conductors, a one-tile halo (so an empty zoned
-     lot beside a live road reads powered — matches the 4-neighbour touching
-     rule for 1×1 growth), then per-building truth (brown-outs visible) */
+  /* stamp grid.powered: live conductors dilated by Chebyshev 3 — the same
+     reach as the road-access rule, so any zone tile that can grow (within 3
+     of a powered road) also reads powered. Separable dilation, then
+     per-building truth (brown-outs visible). */
   const powered = grid.powered;
-  for (let i = 0; i < TILE_COUNT; i++) powered[i] = reach[i];
-  for (let i = 0; i < TILE_COUNT; i++) {
-    if (powered[i]) continue;
-    const x = i % GRID_W;
-    if (
-      (x > 0 && reach[i - 1]) ||
-      (x < GRID_W - 1 && reach[i + 1]) ||
-      (i >= GRID_W && reach[i - GRID_W]) ||
-      (i < TILE_COUNT - GRID_W && reach[i + GRID_W])
-    ) {
-      powered[i] = 1;
+  for (let y = 0; y < GRID_H; y++) {
+    const row = y * GRID_W;
+    for (let x = 0; x < GRID_W; x++) {
+      let v = 0;
+      const lo = x - 3 < 0 ? 0 : x - 3;
+      const hi = x + 3 >= GRID_W ? GRID_W - 1 : x + 3;
+      for (let k = lo; k <= hi; k++) {
+        if (reach[row + k]) {
+          v = 1;
+          break;
+        }
+      }
+      dilA[row + x] = v;
+    }
+  }
+  for (let y = 0; y < GRID_H; y++) {
+    for (let x = 0; x < GRID_W; x++) {
+      let v = 0;
+      const lo = y - 3 < 0 ? 0 : y - 3;
+      const hi = y + 3 >= GRID_H ? GRID_H - 1 : y + 3;
+      for (let k = lo; k <= hi; k++) {
+        if (dilA[k * GRID_W + x]) {
+          v = 1;
+          break;
+        }
+      }
+      powered[y * GRID_W + x] = v;
     }
   }
   stampFootprints(grid, nB, bPow, powered);

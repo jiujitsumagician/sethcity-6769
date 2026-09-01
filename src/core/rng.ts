@@ -13,9 +13,16 @@ export function mulberry32(seed: number) {
 
 export type Rng = () => number;
 
-/** stable hash -> [0,1) for a tile, used for visual variation */
+/** stable hash -> [0,1) for a tile, used for visual variation.
+ *  All products go through Math.imul — plain float multiply overflows 2^53
+ *  for large salts (e.g. tick+seed) and quantises the low bits, which
+ *  destroys the distribution of low hash values. */
 export function hash2(x: number, y: number, salt = 0): number {
-  let h = (x * 374761393 + y * 668265263 + salt * 2147483647) | 0;
+  let h =
+    (Math.imul(x | 0, 374761393) +
+      Math.imul(y | 0, 668265263) +
+      Math.imul(salt | 0, 2654435761)) |
+    0;
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
