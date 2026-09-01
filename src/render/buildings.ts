@@ -1696,7 +1696,7 @@ function bCivic(s: GeoSink, c: Ctx) {
   if (library || (!police && !fire)) {
     const nCol = library ? 4 : 2;
     for (let k = 0; k < nCol; k++) {
-      const px = lerp(ex0 + 0.06, ex1 - 0.06, nCol === 1 ? 0.5 : k / (nCol - 1));
+      const px = lerp(ex0 + 0.06, ex1 - 0.06, k / (nCol - 1));
       column(s, px, bz0 - 0.09, 0.08, hB * 0.62, 0.028, rgb(WHITE));
     }
     s.gable(ex0 - 0.02, bz0 - 0.13, ex1 + 0.02, bz0 + 0.05, hB * 0.7, 0.12, true, trim, rgb(WHITE));
@@ -2090,7 +2090,7 @@ function bPlaza(s: GeoSink, c: Ctx) {
   s.disc(cx, cz, 0.07, 0.27, 10, shade(WATERC, 1.15), E_WIN_DIM);
   s.cyl(cx, cz, 0.07, 0.24, 0.05, 0.035, 7, shade(0xd8d2c4, 0.9), shade(0xd8d2c4, 0.85));
   s.cyl(cx, cz, 0.24, 0.3, 0.11, 0.09, 7, shade(0xd8d2c4, 0.95), shade(WATERC, 1.2), E_WIN_DIM);
-  s.cyl(cx, cz, 0.3, 0.44, 0.02, 0.012, 5, rgb(0xbfe8f5), E_WIN);
+  s.cyl(cx, cz, 0.3, 0.44, 0.02, 0.012, 5, rgb(0xbfe8f5), null, E_WIN);
   // corner planters + lamps + benches
   for (const [px, pz] of [[0.18, 0.18], [W - 0.18, 0.18], [0.18, H - 0.18], [W - 0.18, H - 0.18]] as const) {
     s.box(px - 0.09, 0.014, pz - 0.09, px + 0.09, 0.07, pz + 0.09, shade(0x8a8378, 1), shade(HEDGE, 0.9));
@@ -2099,4 +2099,594 @@ function bPlaza(s: GeoSink, c: Ctx) {
   }
   bench(s, cx - 0.4, cz, 0.014, false);
   bench(s, cx + 0.4, cz, 0.014, false);
+}
+
+/* ---------------------------- transport + heroes ------------------------- */
+
+function crane(s: GeoSink, x: number, z: number, y: number, h: number, reach: number, col: V3) {
+  s.bar(x, y, z, x, y + h, z, 0.045, 0.045, col);
+  s.bar(x, y + h, z, x + reach, y + h, z, 0.035, 0.035, col);
+  s.bar(x, y + h, z, x - reach * 0.3, y + h * 0.86, z, 0.025, 0.025, col);
+  s.bar(x + reach * 0.78, y + h, z, x + reach * 0.78, y + h * 0.52, z, 0.012, 0.012, shade(0x34383c, 1));
+}
+
+function bPort(s: GeoSink, c: Ctx) {
+  const W = c.w;
+  const H = c.h;
+  s.flat(0.02, 0.02, W - 0.02, H - 0.02, 0.014, shade(CONCRETE, 0.78));
+  s.box(0, 0, 0, W, 0.12, 0.22, shade(CONCRETE, 0.75), shade(CONCRETE, 0.9));
+  for (let x = 0.18; x < W; x += 0.55) s.bar(x, -0.35, 0.08, x, 0.02, 0.08, 0.035, 0.035, shade(0x555a60, 1));
+  if (c.key === 'l_marina') {
+    for (let k = 0; k < 4; k++) {
+      const x = 0.35 + k * ((W - 0.7) / 3);
+      s.box(x - 0.035, 0.03, 0, x + 0.035, 0.07, H * 0.58, shade(TRUNK, 1.1), shade(TRUNK, 1.2));
+      s.box(x - 0.13, 0.025, 0.35 + (k & 1) * 0.3, x + 0.13, 0.07, 0.48 + (k & 1) * 0.3, rgb(WHITE), shade(0x4a7fc2, 1));
+      s.bar(x, 0.07, 0.41 + (k & 1) * 0.3, x, 0.3, 0.41 + (k & 1) * 0.3, 0.012, 0.012, rgb(WHITE));
+    }
+    s.box(0.12, 0, H - 0.55, W - 0.12, 0.34, H - 0.12, shade(0xd8cbb4, 1), shade(ROOF_DARK, 1));
+    s.wallQuad(0, 0.22, 0.08, W - 0.22, 0.28, H - 0.55, 0.016, rgb(0xffe6ba), E_RETAIL);
+    return;
+  }
+  s.box(0.16, 0, H - 0.8, W * 0.48, 0.55, H - 0.14, shade(0x9fa3a6, 1), shade(0x676c70, 1));
+  s.gable(0.13, H - 0.83, W * 0.48 + 0.03, H - 0.11, 0.55, 0.14, true, shade(0x676c70, 1), shade(0x9fa3a6, 1));
+  for (let k = 0; k < 3; k++) crane(s, 0.55 + k * ((W - 1.1) / 2), 0.45, 0.02, 1.35, 0.65, shade(0xe1a62b, 1));
+  crates(s, c, W * 0.68, H * 0.55, 0.014, 12);
+  lampPost(s, W - 0.2, H - 0.2, 0.014, 0.7);
+}
+
+function bAirport(s: GeoSink, c: Ctx) {
+  const W = c.w;
+  const H = c.h;
+  s.flat(0.02, 0.02, W - 0.02, H - 0.02, 0.012, shade(ASPHALT, 1.05));
+  const rz = H * 0.7;
+  s.flat(0.12, rz - 0.34, W - 0.12, rz + 0.34, 0.022, shade(0x282c31, 1));
+  for (let x = 0.35; x < W - 0.3; x += 0.45) s.flat(x, rz - 0.025, x + 0.2, rz + 0.025, 0.027, rgb(WHITE), E_SIGN_SOFT);
+  const terminalZ = 0.18;
+  s.box(0.25, 0, terminalZ, W - 1.1, 0.55, H * 0.38, shade(0xb8c0c6, 1), shade(0x77848c, 1));
+  s.wallQuad(2, 0.32, 0.08, W - 1.17, 0.45, H * 0.38, 0.018, rgb(0x8dc8e8), E_RETAIL_SOFT);
+  s.box(0.5, 0.55, terminalZ + 0.12, W - 1.4, 0.78, H * 0.38 - 0.12, rgb(GLASS), shade(0x77848c, 1));
+  for (let k = 0; k < 4; k++) {
+    const x = 0.55 + k * ((W - 1.8) / 3);
+    s.box(x, 0.12, H * 0.38, x + 0.14, 0.24, H * 0.52, shade(0x9aa2a8, 1), shade(0x9aa2a8, 1));
+  }
+  // control tower
+  const cx = W - 0.55;
+  s.cyl(cx, H * 0.22, 0, 1.25, 0.16, 0.11, 8, shade(CONCRETE, 0.9), null);
+  s.cyl(cx, H * 0.22, 1.25, 1.52, 0.25, 0.25, 8, rgb(GLASS), shade(0x77848c, 1), E_WIN_DIM);
+  s.cyl(cx, H * 0.22, 1.52, 1.6, 0.27, 0.2, 8, shade(0x555a60, 1), shade(0x555a60, 1));
+  // parked low-poly aircraft
+  for (let k = 0; k < 2; k++) {
+    const px = W * (0.32 + k * 0.3);
+    const pz = H * 0.5;
+    s.boxR(px, pz, 0.55, 0.12, 0.07, 0.14, Math.PI / 2, rgb(WHITE), rgb(WHITE));
+    s.bar(px - 0.02, 0.1, pz - 0.42, px + 0.02, 0.1, pz + 0.42, 0.035, 0.035, shade(0x4a7fc2, 1));
+    s.bar(px - 0.2, 0.1, pz, px + 0.34, 0.1, pz, 0.025, 0.025, rgb(WHITE));
+  }
+  if (s.collect) {
+    const [wx, wy, wz] = s.toWorld(cx, 1.73, H * 0.22);
+    pendingAnims.push({ kind: AnimKind.Radar, x: wx, y: wy, z: wz, yaw: 0, speed: 1.1, phase: hash2(c.seedI, 67, 3), scale: 0.65 });
+    pendingAnims.push({ kind: AnimKind.Beacon, x: wx, y: wy + 0.12, z: wz, yaw: 0, speed: 1, phase: hash2(c.seedI, 68, 3), scale: 0.2 });
+  }
+}
+
+function bTransit(s: GeoSink, c: Ctx) {
+  const W = c.w;
+  const H = c.h;
+  s.flat(0.02, 0.02, W - 0.02, H - 0.02, 0.012, rgb(PAVE));
+  if (c.key === 't_subway') {
+    s.box(W * 0.25, 0, H * 0.28, W * 0.75, 0.3, H * 0.72, rgb(GLASS), shade(0x51606b, 1), E_RETAIL_SOFT);
+    s.gable(W * 0.22, H * 0.25, W * 0.78, H * 0.75, 0.3, 0.12, true, shade(0x3ddbd9, 1), shade(0x51606b, 1));
+    s.box(W * 0.42, 0.02, H * 0.08, W * 0.58, 0.08, H * 0.3, shade(0x555a60, 1), shade(0x555a60, 1));
+    lampPost(s, 0.2, H - 0.2, 0.012);
+    return;
+  }
+  if (c.key === 't_bus') {
+    s.box(0.12, 0, 0.15, W - 0.12, 0.42, H * 0.48, shade(0xb8c0c6, 1), shade(0x77848c, 1));
+    s.wallQuad(0, 0.22, 0.08, W - 0.22, 0.35, 0.15, 0.016, rgb(0xffe6ba), E_RETAIL);
+    for (let k = 0; k < 3; k++) s.box(0.18 + k * 0.5, 0.03, H * 0.62, 0.55 + k * 0.5, 0.18, H * 0.78, shade(0x3ddbd9, 0.8), shade(0x3ddbd9, 1));
+    return;
+  }
+  // rail station: long platforms, glazed concourse and canopy
+  for (let k = 0; k < 3; k++) {
+    const z = 0.35 + k * ((H - 0.7) / 2);
+    s.box(0.1, 0.02, z - 0.11, W - 0.1, 0.08, z + 0.11, shade(CONCRETE, 0.9), shade(CONCRETE, 1));
+    for (let x = 0.25; x < W - 0.2; x += 0.45) s.bar(x, 0.08, z, x, 0.42, z, 0.018, 0.018, rgb(METAL));
+    s.quad(W - 0.08, 0.42, z + 0.18, 0.08, 0.42, z + 0.18, 0.14, 0.52, z - 0.18, W - 0.14, 0.52, z - 0.18, shade(0xdfe3e6, 1));
+  }
+  s.box(W * 0.32, 0.08, 0.12, W * 0.68, 0.9, H - 0.12, rgb(GLASS), shade(0x51606b, 1), E_WIN_DIM);
+  s.gable(W * 0.29, 0.09, W * 0.71, H - 0.09, 0.9, 0.22, false, shade(0x51606b, 1), shade(0xb8c0c6, 1));
+}
+
+function heroWindows(s: GeoSink, c: Ctx, x0: number, z0: number, x1: number, z1: number, y0: number, y1: number) {
+  windowBox(s, c, x0, z0, x1, z1, y0, y1, clamp(Math.round((y1 - y0) / 0.75), 2, 28), 0.58, 3);
+}
+
+function bLandmark(s: GeoSink, c: Ctx) {
+  const W = c.w;
+  const H = c.h;
+  const cx = W / 2;
+  const cz = H / 2;
+  const key = c.key;
+  s.flat(0.03, 0.03, W - 0.03, H - 0.03, 0.014, key === 'arco_forest' ? shade(LAWN, 0.95) : rgb(PAVE));
+  if (key === 'x_tower') {
+    s.cyl(cx, cz, 0, 2.2, 0.8, 0.52, 10, shade(0xc7d2da, 1), null);
+    s.cyl(cx, cz, 2.2, c.ht * 0.78, 0.52, 0.34, 10, shade(0x6f95b3, 1), null);
+    for (let y = 3; y < c.ht * 0.76; y += 1.5) s.cyl(cx, cz, y, y + 0.18, 0.54 - y * 0.002, 0.54 - y * 0.002, 10, rgb(0xffd98a), null, lit(c, y | 0, 0, 0, 0.58) ? E_WIN : 0);
+    s.cyl(cx, cz, c.ht * 0.78, c.ht * 0.9, 0.34, 0.12, 8, shade(0xcfd4d8, 1), null);
+    s.cyl(cx, cz, c.ht * 0.9, c.ht + 6, 0.1, 0.008, 7, rgb(0xe8ebee), null);
+    if (s.collect) {
+      const [x, y, z] = s.toWorld(cx, c.ht + 6.1, cz);
+      pendingAnims.push({ kind: AnimKind.Beacon, x, y, z, yaw: 0, speed: 1, phase: 0, scale: 0.35 });
+    }
+    return;
+  }
+  if (key === 'x_llama') {
+    const gold = shade(0xd8aa37, 1.15);
+    s.cyl(cx, cz, 0, 1.8, 1.05, 1.05, 14, shade(0xe8dfc8, 1), shade(0xd8cba8, 1));
+    s.dome(cx, cz, 1.8, 1.08, 14, 5, gold, 1.15);
+    s.cyl(cx - 0.42, cz, 2.65, 3.65, 0.18, 0.035, 6, gold, null);
+    s.cyl(cx + 0.42, cz, 2.65, 3.65, 0.18, 0.035, 6, gold, null);
+    s.wallQuad(0, cx - 0.7, 0.25, cx + 0.7, 1.2, cz - 1.05, 0.025, rgb(0x3ddbd9), E_SIGN);
+    return;
+  }
+  if (key === 'x_cityhall') {
+    s.box(0.25, 0, 0.55, W - 0.25, 2.3, H - 0.28, shade(0xd9d0bd, 1), shade(0xa99c83, 1));
+    for (let k = 0; k < 6; k++) column(s, 0.55 + k * ((W - 1.1) / 5), 0.38, 0, 1.65, 0.065, rgb(WHITE));
+    s.gable(0.35, 0.25, W - 0.35, 0.68, 1.65, 0.48, true, shade(0xb8ad96, 1), rgb(WHITE));
+    s.cyl(cx, H * 0.6, 2.3, 3.2, 0.65, 0.65, 12, shade(0xd9d0bd, 1), null);
+    s.dome(cx, H * 0.6, 3.2, 0.72, 12, 5, shade(0x68a49a, 1));
+    flagPole(s, c, cx, H * 0.6, 3.85, 1.2);
+    return;
+  }
+  if (key === 'x_statue') {
+    s.box(0.18, 0, 0.18, 0.82, 0.7, 0.82, shade(0xb8ad96, 1), shade(0xd5c9ae, 1));
+    s.box(0.3, 0.7, 0.3, 0.7, 1.05, 0.7, shade(0x66756d, 1), shade(0x77887e, 1));
+    s.bar(0.5, 1.05, 0.5, 0.48, 2.55, 0.5, 0.11, 0.11, shade(0x66756d, 1));
+    s.cyl(0.48, 0.5, 2.5, 2.85, 0.16, 0.14, 7, shade(0x66756d, 1), shade(0x77887e, 1));
+    s.bar(0.48, 2.2, 0.5, 0.18, 1.55, 0.45, 0.07, 0.07, shade(0x66756d, 1));
+    s.bar(0.48, 2.2, 0.5, 0.82, 2.65, 0.45, 0.07, 0.07, shade(0x66756d, 1));
+    return;
+  }
+  if (key === 'x_observatory') {
+    s.box(0.3, 0, 0.3, W - 0.3, 1.3, H - 0.3, shade(0xd8d2c4, 1), shade(0xa8a196, 1));
+    s.cyl(cx, cz, 1.3, 2.0, 1.05, 1.05, 14, shade(0xd9dde0, 1), null);
+    s.dome(cx, cz, 2, 1.08, 14, 6, shade(0xc8cdd1, 1));
+    s.box(cx - 0.1, 1.95, cz - 1.09, cx + 0.1, 3.0, cz - 0.98, shade(0x30363b, 1), shade(0x30363b, 1));
+    return;
+  }
+  if (key === 'x_casino') {
+    s.box(0.25, 0, 0.2, W - 0.25, 2.0, H - 0.25, shade(0xd6c7ad, 1), shade(0x5a4d62, 1));
+    s.box(0.55, 2, 0.5, W - 0.55, c.ht, H - 0.55, shade(0x735e86, 1), shade(0x3d3448, 1));
+    heroWindows(s, c, 0.55, 0.5, W - 0.55, H - 0.55, 2.2, c.ht - 0.4);
+    for (let y = 1; y < c.ht; y += 2.2) s.wallQuad(0, 0.35, y, W - 0.35, y + 0.24, 0.2, 0.03, neon(c, y | 0), E_SIGN);
+    s.cyl(cx, 0.1, 0.4, 2.2, 0.18, 0.18, 10, neon(c, 8), rgb(0xffc93c), E_SIGN);
+    return;
+  }
+  if (key === 'arco_plymouth') {
+    for (let k = 0; k < 8; k++) {
+      const y0 = (c.ht * k) / 8;
+      const y1 = (c.ht * (k + 1)) / 8;
+      const m = 0.18 + k * 0.17;
+      s.box(m, y0, m, W - m, y1, H - m, shade(0x77a9c4, 0.92 + k * 0.035), shade(0x274b63, 1));
+      heroWindows(s, c, m, m, W - m, H - m, y0 + 0.25, y1 - 0.18);
+    }
+    s.pyramid(cx, cz, 1.3, 1.3, c.ht, 4, shade(0xbfdbe7, 1));
+    return;
+  }
+  if (key === 'arco_forest') {
+    for (let k = 0; k < 9; k++) {
+      const y0 = (c.ht * k) / 9;
+      const m = 0.15 + k * 0.18;
+      s.box(m, y0, m, W - m, y0 + c.ht / 9, H - m, shade(0x8aa58e, 1), shade(LAWN, 1.1));
+      heroWindows(s, c, m, m, W - m, H - m, y0 + 0.2, y0 + c.ht / 9 - 0.15);
+      if ((k & 1) === 0) for (let q = 0; q < 4; q++) treeBlob(s, m + 0.25 + q * ((W - 2 * m - 0.5) / 3), m + 0.12, y0 + c.ht / 9, 1.2, c.seedI + k * 9 + q);
+    }
+    return;
+  }
+  if (key === 'arco_darco') {
+    const dark = shade(0x252735, 1);
+    for (let k = 0; k < 7; k++) {
+      const y0 = k * c.ht / 7;
+      const rr = 1.55 - k * 0.13;
+      s.cyl(cx, cz, y0, y0 + c.ht / 7 + 0.3, rr, rr * 0.88, 9, dark, null);
+      s.cyl(cx, cz, y0 + c.ht / 14, y0 + c.ht / 14 + 0.2, rr + 0.05, rr + 0.05, 9, neon(c, k), null, E_WIN_DIM);
+      for (let q = 0; q < 3; q++) {
+        const a = q * Math.PI * 2 / 3 + k * 0.7;
+        s.bar(cx + Math.cos(a) * rr * 0.75, y0 + 0.2, cz + Math.sin(a) * rr * 0.75, cx + Math.cos(a) * (rr + 0.7), y0 + c.ht / 7, cz + Math.sin(a) * (rr + 0.7), 0.08, 0.08, dark);
+      }
+    }
+    s.cyl(cx, cz, c.ht, c.ht + 5, 0.25, 0.01, 7, dark, null);
+    return;
+  }
+  if (key === 'arco_launch') {
+    // launch gantry, service decks, and a bright central rocket
+    for (const [x, z] of [[0.45, 0.45], [W - 0.45, 0.45], [0.45, H - 0.45], [W - 0.45, H - 0.45]] as const)
+      s.bar(x, 0, z, x, c.ht * 0.9, z, 0.13, 0.13, shade(0x59636b, 1));
+    for (let y = 4; y < c.ht * 0.88; y += 5) {
+      s.bar(0.45, y, 0.45, W - 0.45, y, 0.45, 0.09, 0.09, shade(0x77848c, 1));
+      s.bar(0.45, y, H - 0.45, W - 0.45, y, H - 0.45, 0.09, 0.09, shade(0x77848c, 1));
+    }
+    s.cyl(cx, cz, 0.4, c.ht * 0.78, 0.58, 0.45, 12, rgb(WHITE), null);
+    s.cyl(cx, cz, c.ht * 0.78, c.ht, 0.45, 0.01, 12, shade(0xe8e8e8, 1), null);
+    for (let q = 0; q < 4; q++) {
+      const a = q * Math.PI / 2;
+      s.bar(cx + Math.cos(a) * 0.42, 1.2, cz + Math.sin(a) * 0.42, cx + Math.cos(a) * 0.95, 0.25, cz + Math.sin(a) * 0.95, 0.14, 0.08, shade(0xd94c42, 1));
+    }
+    if (s.collect) {
+      const [x, y, z] = s.toWorld(cx, c.ht + 0.2, cz);
+      pendingAnims.push({ kind: AnimKind.Beacon, x, y, z, yaw: 0, speed: 1, phase: 0.2, scale: 0.3 });
+    }
+    return;
+  }
+  // Museum and future landmark keys get a dignified, faceted cultural hall.
+  s.box(0.25, 0, 0.45, W - 0.25, c.ht * 0.45, H - 0.25, shade(0xd8d2c4, 1), shade(0x9d9482, 1));
+  for (let k = 0; k < 6; k++) column(s, 0.5 + k * ((W - 1) / 5), 0.28, 0, c.ht * 0.34, 0.055, rgb(WHITE));
+  s.pyramid(cx, H * 0.58, W * 0.72, H * 0.6, c.ht * 0.45, c.ht * 0.18, shade(0x78a5b7, 1));
+  s.wallQuad(0, W * 0.3, c.ht * 0.2, W * 0.7, c.ht * 0.32, 0.45, 0.02, shade(0xc9a44a, 1), E_SIGN_SOFT);
+}
+
+function bRubble(s: GeoSink, c: Ctx) {
+  s.flat(0.04, 0.04, c.w - 0.04, c.h - 0.04, 0.012, shade(0x6f685f, 0.8));
+  for (let k = 0; k < 9; k++) {
+    const x = 0.08 + c.r() * (c.w - 0.25);
+    const z = 0.08 + c.r() * (c.h - 0.25);
+    const q = 0.06 + c.r() * 0.16;
+    s.boxR(x, z, q * 1.7, q, 0.01, q * (0.5 + c.r()), c.r() * Math.PI, shade(0x77706a, 0.7 + c.r() * 0.35), shade(0x91877d, 1));
+  }
+}
+
+const BUILDERS: Record<BuildingDef['archetype'], Builder> = {
+  house: bHouse,
+  rowhouse: bRowhouse,
+  apartment: bApartment,
+  tower: bTower,
+  shop: bShop,
+  office: bOffice,
+  skyscraper: bSkyscraper,
+  mall: bMall,
+  farm: bFarm,
+  workshop: bWorkshop,
+  factory: bFactory,
+  refinery: bRefinery,
+  warehouse: bWarehouse,
+  powerplant: bPowerplant,
+  windturbine: bWindturbine,
+  solarfarm: bSolarfarm,
+  watertower: bWatertower,
+  civic: bCivic,
+  hospital: bHospital,
+  school: bSchool,
+  university: bUniversity,
+  stadium: bStadium,
+  park: bPark,
+  plaza: bPlaza,
+  landmark: bLandmark,
+  port: bPort,
+  airport: bAirport,
+  transit: bTransit,
+  rubble: bRubble,
+};
+
+function buildOne(s: GeoSink, grid: Grid, i: number, collect = true) {
+  const id = grid.building[i];
+  if (!id) return;
+  const def = defOf(id);
+  const x = tx(i);
+  const z = ty(i);
+  const abandoned = !!(def.grown && grid.condition[i] === 0 && grid.age[i] > 4);
+  const seedI = ((x * 73856093) ^ (z * 19349663) ^ (grid.variant[i] * 83492791) ^ (id * 2654435761)) >>> 0;
+  const variation = def.grown ? 0.88 + hash2(x, z, grid.variant[i] + 41) * 0.24 : 1;
+  const c: Ctx = {
+    def,
+    key: def.key,
+    w: def.w,
+    h: def.h,
+    level: grid.level[i] || def.level || 1,
+    seedI,
+    r: mulberry32(seedI),
+    ht: Math.max(0.2, (def.height ?? 2.5) * variation),
+    abandoned,
+  };
+  s.setFrame(x, grid.height[i], z, def.w, def.h, grid.rotation[i]);
+  s.collect = collect;
+  const v0 = s.v;
+  const anim0 = pendingAnims.length;
+  if (grid.onFire[i]) {
+    s.box(0.08, 0, 0.08, def.w - 0.08, Math.min(c.ht, 3), def.h - 0.08, shade(0x8f4930, 1), shade(0x3a302d, 1));
+  } else {
+    BUILDERS[def.archetype](s, c);
+  }
+  if (collect && !grid.onFire[i] && c.ht > 20) {
+    let hasBeacon = false;
+    for (let k = anim0; k < pendingAnims.length; k++) hasBeacon ||= pendingAnims[k].kind === AnimKind.Beacon;
+    if (!hasBeacon) {
+      const [wx, wy, wz] = s.toWorld(def.w * 0.5, c.ht + 0.12, def.h * 0.5);
+      pendingAnims.push({ kind: AnimKind.Beacon, x: wx, y: wy, z: wz, yaw: 0, speed: 1, phase: hash2(c.seedI, 83, 3), scale: 0.22 });
+    }
+  }
+  if (abandoned || grid.onFire[i]) {
+    const fire = !!grid.onFire[i];
+    for (let v = v0; v < s.v; v++) {
+      const p = v * 3;
+      if (fire) {
+        s.col[p] = s.col[p] * 0.35 + 0.55;
+        s.col[p + 1] *= 0.22;
+        s.col[p + 2] *= 0.08;
+      } else {
+        const grey = (s.col[p] + s.col[p + 1] + s.col[p + 2]) / 3;
+        s.col[p] = lerp(s.col[p], grey, 0.55) * 0.48;
+        s.col[p + 1] = lerp(s.col[p + 1], grey, 0.55) * 0.48;
+        s.col[p + 2] = lerp(s.col[p + 2], grey, 0.55) * 0.48;
+      }
+      s.emi[v] = 0;
+    }
+  }
+}
+
+function geometryFrom(s: GeoSink): THREE.BufferGeometry {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(s.pos.slice(0, s.v * 3), 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(s.nor.slice(0, s.v * 3), 3));
+  g.setAttribute('color', new THREE.BufferAttribute(s.col.slice(0, s.v * 3), 3));
+  g.setAttribute('aEmissive', new THREE.BufferAttribute(s.emi.slice(0, s.v), 1));
+  g.setIndex(new THREE.BufferAttribute(s.ind.slice(0, s.ic), 1));
+  g.computeBoundingSphere();
+  return g;
+}
+
+interface PopState {
+  i: number;
+  t: number;
+  mesh: THREE.Mesh;
+  baseY: number;
+}
+
+/* ------------------------------- renderer -------------------------------- */
+
+export class BuildingRenderer {
+  private readonly scene: THREE.Scene;
+  private readonly grid: Grid;
+  private readonly sink = new GeoSink();
+  private readonly chunks: Array<THREE.Mesh | null> = new Array(CHUNKS_X * CHUNKS_Y).fill(null);
+  private readonly chunkAnims: AnimSpot[][] = Array.from({ length: CHUNKS_X * CHUNKS_Y }, () => []);
+  private readonly suppressed = new Set<number>();
+  private readonly pops: PopState[] = [];
+  private readonly material: THREE.MeshLambertMaterial;
+  private readonly nightUniform = { value: 0 };
+  private readonly animMaterial: THREE.MeshStandardMaterial;
+  private rotorMesh: THREE.InstancedMesh | null = null;
+  private beaconMesh: THREE.InstancedMesh | null = null;
+  private radarMesh: THREE.InstancedMesh | null = null;
+  private rotorSpots: AnimSpot[] = [];
+  private beaconSpots: AnimSpot[] = [];
+  private radarSpots: AnimSpot[] = [];
+  private readonly matrix = new THREE.Matrix4();
+  private readonly position = new THREE.Vector3();
+  private readonly quaternion = new THREE.Quaternion();
+  private readonly scale = new THREE.Vector3();
+  private readonly qYaw = new THREE.Quaternion();
+  private readonly qSpin = new THREE.Quaternion();
+  private disposed = false;
+
+  constructor(scene: THREE.Scene, grid: Grid) {
+    this.scene = scene;
+    this.grid = grid;
+    this.material = new THREE.MeshLambertMaterial({ vertexColors: true });
+    this.material.onBeforeCompile = (shader) => {
+      shader.uniforms.uNight = this.nightUniform;
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nattribute float aEmissive;\nvarying float vBuildingEmissive;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvBuildingEmissive = aEmissive;');
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform float uNight;\nvarying float vBuildingEmissive;')
+        .replace(
+          '#include <emissivemap_fragment>',
+          `#include <emissivemap_fragment>
+          float eBand = floor(vBuildingEmissive);
+          float eStrength = fract(vBuildingEmissive);
+          float eGate = smoothstep(eBand < 0.5 ? 0.42 : (eBand < 1.5 ? 0.22 : 0.08), 0.82, uNight);
+          vec3 eColour = eBand < 0.5 ? vec3(1.0, 0.694, 0.254) : vColor;
+          totalEmissiveRadiance += eColour * eStrength * eGate * 1.8;`,
+        );
+    };
+    this.material.customProgramCacheKey = () => 'sethcity-building-emissive-v1';
+    this.animMaterial = new THREE.MeshStandardMaterial({ color: 0xe7eaec, roughness: 0.55, metalness: 0.3 });
+    this.rebuildAll();
+  }
+
+  rebuildAll(): void {
+    if (this.disposed) return;
+    for (let cy = 0; cy < CHUNKS_Y; cy++) for (let cx = 0; cx < CHUNKS_X; cx++) this.rebuildChunkInternal(cx, cy, false);
+    this.rebuildAnimatedMeshes();
+  }
+
+  rebuildChunk(cx: number, cy: number): void {
+    this.rebuildChunkInternal(cx, cy, true);
+  }
+
+  private rebuildChunkInternal(cx: number, cy: number, refreshAnims: boolean): void {
+    if (this.disposed || cx < 0 || cy < 0 || cx >= CHUNKS_X || cy >= CHUNKS_Y) return;
+    const ci = cy * CHUNKS_X + cx;
+    const old = this.chunks[ci];
+    if (old) {
+      this.scene.remove(old);
+      old.geometry.dispose();
+      this.chunks[ci] = null;
+    }
+    this.sink.reset();
+    pendingAnims = [];
+    const x0 = cx * CHUNK;
+    const y0 = cy * CHUNK;
+    for (let y = y0; y < y0 + CHUNK; y++) for (let x = x0; x < x0 + CHUNK; x++) {
+      const i = idx(x, y);
+      if (!this.grid.building[i] || this.grid.originOffset[i] !== 0 || this.suppressed.has(i)) continue;
+      buildOne(this.sink, this.grid, i);
+    }
+    this.chunkAnims[ci] = pendingAnims;
+    if (this.sink.v) {
+      const mesh = new THREE.Mesh(geometryFrom(this.sink), this.material);
+      mesh.name = `buildings-${cx}-${cy}`;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.frustumCulled = true;
+      this.scene.add(mesh);
+      this.chunks[ci] = mesh;
+    }
+    if (refreshAnims) this.rebuildAnimatedMeshes();
+  }
+
+  update(dt: number, elapsed: number, nightFactor: number): void {
+    if (this.disposed) return;
+    this.nightUniform.value = clamp(nightFactor, 0, 1);
+    this.updateRotors(elapsed);
+    this.updateRadars(elapsed);
+    this.updateBeacons(elapsed, nightFactor);
+    for (let p = this.pops.length - 1; p >= 0; p--) {
+      const pop = this.pops[p];
+      pop.t += dt / 0.5;
+      const t = Math.min(1, pop.t);
+      const elastic = t === 1 ? 1 : Math.pow(2, -9 * t) * Math.sin((t * 9 - 0.7) * Math.PI) + 1;
+      pop.mesh.scale.set(elastic, Math.max(0.02, elastic), elastic);
+      pop.mesh.position.y = pop.baseY;
+      if (t >= 1) {
+        this.scene.remove(pop.mesh);
+        pop.mesh.geometry.dispose();
+        this.suppressed.delete(pop.i);
+        this.pops.splice(p, 1);
+        this.rebuildChunkInternal((tx(pop.i) / CHUNK) | 0, (ty(pop.i) / CHUNK) | 0, true);
+      }
+    }
+  }
+
+  popIn(i: number): void {
+    if (this.disposed || !this.grid.building[i]) return;
+    const origin = this.grid.originOffset[i] === 0 ? i : this.grid.originOf(tx(i), ty(i));
+    if (origin < 0 || this.suppressed.has(origin)) return;
+    this.suppressed.add(origin);
+    this.rebuildChunkInternal((tx(origin) / CHUNK) | 0, (ty(origin) / CHUNK) | 0, true);
+    this.sink.reset();
+    pendingAnims = [];
+    buildOne(this.sink, this.grid, origin, false);
+    if (!this.sink.v) return;
+    const mesh = new THREE.Mesh(geometryFrom(this.sink), this.material);
+    const def = defOf(this.grid.building[origin]);
+    const cx = tx(origin) + def.w * 0.5;
+    const cz = ty(origin) + def.h * 0.5;
+    // Geometry is already in world space; scale around the footprint centre.
+    mesh.geometry.translate(-cx, -this.grid.height[origin], -cz);
+    mesh.position.set(cx, this.grid.height[origin], cz);
+    mesh.scale.setScalar(0.02);
+    mesh.castShadow = true;
+    this.scene.add(mesh);
+    this.pops.push({ i: origin, t: 0, mesh, baseY: this.grid.height[origin] });
+  }
+
+  dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+    for (const mesh of this.chunks) if (mesh) {
+      this.scene.remove(mesh);
+      mesh.geometry.dispose();
+    }
+    for (const pop of this.pops) {
+      this.scene.remove(pop.mesh);
+      pop.mesh.geometry.dispose();
+    }
+    this.removeAnimatedMeshes();
+    this.material.dispose();
+    this.animMaterial.dispose();
+    this.pops.length = 0;
+    this.suppressed.clear();
+  }
+
+  private removeAnimatedMeshes() {
+    for (const mesh of [this.rotorMesh, this.beaconMesh, this.radarMesh]) if (mesh) {
+      this.scene.remove(mesh);
+      mesh.geometry.dispose();
+      if (mesh.material !== this.animMaterial) (mesh.material as THREE.Material).dispose();
+    }
+    this.rotorMesh = null;
+    this.beaconMesh = null;
+    this.radarMesh = null;
+  }
+
+  private rebuildAnimatedMeshes() {
+    this.removeAnimatedMeshes();
+    this.rotorSpots = [];
+    this.beaconSpots = [];
+    this.radarSpots = [];
+    for (const list of this.chunkAnims) for (const spot of list) {
+      if (spot.kind === AnimKind.Rotor) this.rotorSpots.push(spot);
+      else if (spot.kind === AnimKind.Beacon) this.beaconSpots.push(spot);
+      else this.radarSpots.push(spot);
+    }
+    if (this.rotorSpots.length) {
+      const g = new THREE.BoxGeometry(0.075, 1, 0.035);
+      g.translate(0, 0.48, 0);
+      this.rotorMesh = new THREE.InstancedMesh(g, this.animMaterial, this.rotorSpots.length * 3);
+      this.rotorMesh.name = 'building-wind-rotors';
+      this.rotorMesh.frustumCulled = false;
+      this.scene.add(this.rotorMesh);
+    }
+    if (this.beaconSpots.length) {
+      const g = new THREE.OctahedronGeometry(0.07, 0);
+      const m = new THREE.MeshStandardMaterial({ color: 0xff2018, emissive: 0xff1008, emissiveIntensity: 0 });
+      this.beaconMesh = new THREE.InstancedMesh(g, m, this.beaconSpots.length);
+      this.beaconMesh.name = 'building-aviation-beacons';
+      this.beaconMesh.frustumCulled = false;
+      this.scene.add(this.beaconMesh);
+    }
+    if (this.radarSpots.length) {
+      const g = new THREE.BoxGeometry(0.75, 0.06, 0.16);
+      this.radarMesh = new THREE.InstancedMesh(g, this.animMaterial, this.radarSpots.length);
+      this.radarMesh.name = 'building-radars';
+      this.radarMesh.frustumCulled = false;
+      this.scene.add(this.radarMesh);
+    }
+  }
+
+  private updateRotors(elapsed: number) {
+    if (!this.rotorMesh) return;
+    let n = 0;
+    for (const a of this.rotorSpots) for (let blade = 0; blade < 3; blade++) {
+      this.position.set(a.x, a.y, a.z);
+      this.qYaw.setFromAxisAngle(this.position.set(0, 1, 0), a.yaw);
+      this.qSpin.setFromAxisAngle(this.position.set(0, 0, 1), elapsed * a.speed + a.phase + blade * Math.PI * 2 / 3);
+      this.quaternion.copy(this.qYaw).multiply(this.qSpin);
+      this.position.set(a.x, a.y, a.z);
+      this.scale.set(a.scale, a.scale, a.scale);
+      this.matrix.compose(this.position, this.quaternion, this.scale);
+      this.rotorMesh.setMatrixAt(n++, this.matrix);
+    }
+    this.rotorMesh.instanceMatrix.needsUpdate = true;
+  }
+
+  private updateRadars(elapsed: number) {
+    if (!this.radarMesh) return;
+    for (let k = 0; k < this.radarSpots.length; k++) {
+      const a = this.radarSpots[k];
+      this.position.set(a.x, a.y, a.z);
+      this.quaternion.setFromAxisAngle(this.scale.set(0, 1, 0), elapsed * a.speed + a.phase);
+      this.scale.setScalar(a.scale);
+      this.matrix.compose(this.position, this.quaternion, this.scale);
+      this.radarMesh.setMatrixAt(k, this.matrix);
+    }
+    this.radarMesh.instanceMatrix.needsUpdate = true;
+  }
+
+  private updateBeacons(elapsed: number, night: number) {
+    if (!this.beaconMesh) return;
+    for (let k = 0; k < this.beaconSpots.length; k++) {
+      const a = this.beaconSpots[k];
+      const pulse = Math.max(0.08, Math.pow(Math.max(0, Math.sin(elapsed * 3.4 + a.phase * Math.PI * 2)), 12));
+      this.position.set(a.x, a.y, a.z);
+      this.quaternion.identity();
+      this.scale.setScalar(a.scale * (0.6 + pulse * 0.7));
+      this.matrix.compose(this.position, this.quaternion, this.scale);
+      this.beaconMesh.setMatrixAt(k, this.matrix);
+    }
+    this.beaconMesh.instanceMatrix.needsUpdate = true;
+    const mat = this.beaconMesh.material as THREE.MeshStandardMaterial;
+    mat.emissiveIntensity = clamp(night, 0, 1) * (0.5 + Math.pow(Math.max(0, Math.sin(elapsed * 3.4)), 10) * 3.5);
+  }
 }
