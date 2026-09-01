@@ -8,9 +8,9 @@ type DrawerCategory = Category | 'zones' | 'roads' | 'terrain' | 'bulldoze';
 
 const categories: [DrawerCategory, string][] = [['zones','Zones'],['roads','Roads'],['power','Power'],['water','Water'],['safety','Safety'],['health','Health'],['education','Education'],['leisure','Leisure'],['transport','Transport'],['special','Special'],['terrain','Terrain'],['bulldoze','Bulldoze']];
 const tools: Item[] = [
-  ['zone_res_low','Residential L','zones',8,'zone'],['zone_res_med','Residential M','zones',16,'zone'],['zone_res_high','Residential H','zones',24,'zone'],
-  ['zone_com_low','Commercial L','zones',8,'zone'],['zone_com_med','Commercial M','zones',16,'zone'],['zone_com_high','Commercial H','zones',24,'zone'],
-  ['zone_ind_low','Industrial L','zones',8,'zone'],['zone_ind_med','Industrial M','zones',16,'zone'],['zone_ind_high','Industrial H','zones',24,'zone'],
+  ['zone_res_low','Residential Low','zones',8,'zone'],['zone_res_med','Residential Med','zones',16,'zone'],['zone_res_high','Residential High','zones',24,'zone'],
+  ['zone_com_low','Commercial Low','zones',8,'zone'],['zone_com_high','Commercial High','zones',24,'zone'],
+  ['zone_ind_agri','Farmland','zones',8,'zone'],['zone_ind_light','Light Industry','zones',16,'zone'],['zone_ind_heavy','Heavy Industry','zones',24,'zone'],
   ['road_street','Street','roads',12,'network'],['road_avenue','Avenue','roads',60,'network'],['road_highway','Highway','roads',220,'network'],['rail','Rail','roads',90,'network'],
   ['wire','Power Line','power',6,'network'],['pipe','Water Pipe','water',10,'network'],['subway','Subway Tunnel','transport',150,'network'],['sign','City Sign','special',50,'network'],
   ['tree','Plant Trees','terrain',12,'terrain'],['water_place','Place Water','terrain',120,'terrain'],['terrain_raise','Raise','terrain',25,'terrain'],['terrain_lower','Lower','terrain',25,'terrain'],['terrain_level','Level','terrain',25,'terrain'],['inspect','Inspect','terrain',0,'terrain'],['bulldoze','Bulldoze','bulldoze',4,'terrain'],

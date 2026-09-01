@@ -44,7 +44,7 @@ export class Picker {
     this.downX = this.clientX = e.clientX; this.downY = this.clientY = e.clientY;
     this.moved = this.longPressed = false;
     if (this.tool !== 'inspect') this.host.controls.enabled = false;
-    this.timer = window.setTimeout(() => {
+    if (this.tool === 'inspect') this.timer = window.setTimeout(() => {
       if (this.pointer === e.pointerId && !this.moved && !this.host.controls.gesturing) {
         this.longPressed = true; this.selectTile(this.x0, this.y0); this.host.onHighlight(null); this.host.sfx('click');
       }

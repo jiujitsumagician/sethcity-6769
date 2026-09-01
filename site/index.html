@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="description" content="SethCity 6769 is a deep mobile 3D city-building game. Build it, run it, wreck it — then carry the whole city in your pocket.">
+  <meta property="og:title" content="SethCity 6769 — The whole city in your pocket">
+  <meta property="og:description" content="A full-scale 3D city builder for Android, set in the far future. Build it, run it, wreck it.">
+  <meta property="og:image" content="/shot-1.png">
+  <meta property="og:type" content="website">
+  <title>SethCity 6769 — Download for Android</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <style>
+    :root{--ink:#0d1117;--panel:#131a22;--panel-2:#18212b;--line:#29333e;--text:#f2f7f7;--muted:#9baab5;--cyan:#3ddbd9;--cyan-dark:#072b2d;--amber:#ffba66;--radius:24px;--shadow:0 28px 70px rgba(0,0,0,.38)}
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth;overflow-x:hidden}
+    body{margin:0;overflow-x:hidden;background:var(--ink);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+    img{display:block;max-width:100%}
+    a{color:inherit}
+    button,a{-webkit-tap-highlight-color:transparent}
+    .shell{width:min(1100px,calc(100% - 40px));margin-inline:auto}
+    .topbar{height:76px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:20}
+    .brand{display:flex;align-items:center;gap:11px;text-decoration:none;font-weight:900;letter-spacing:-.04em}
+    .brand img{width:34px;height:34px;border-radius:9px;box-shadow:0 0 0 1px rgba(255,255,255,.12)}
+    .brand span span{color:var(--cyan)}
+    .top-link{text-decoration:none;color:var(--muted);font-size:.86rem;font-weight:750;letter-spacing:.04em;text-transform:uppercase}
+    .top-link:hover{color:var(--cyan)}
+    .hero{min-height:760px;display:grid;grid-template-columns:.9fr 1.1fr;gap:58px;align-items:center;padding:62px 0 98px;position:relative}
+    .hero::before{content:"";position:absolute;width:560px;height:560px;left:-360px;top:70px;background:var(--cyan);filter:blur(180px);opacity:.09;pointer-events:none}
+    .eyebrow{display:flex;align-items:center;gap:10px;color:var(--cyan);font-size:.76rem;font-weight:850;letter-spacing:.18em;text-transform:uppercase;margin:0 0 22px}
+    .eyebrow::before{content:"";width:30px;height:1px;background:currentColor}
+    h1,h2,h3,p{margin-top:0}
+    h1{font-size:clamp(3.2rem,7.5vw,6.3rem);line-height:.84;letter-spacing:-.075em;font-weight:950;margin-bottom:28px;max-width:670px}
+    h1 span{display:block;color:var(--cyan)}
+    .tagline{font-size:clamp(1.12rem,2.2vw,1.38rem);line-height:1.45;color:#cad4da;max-width:510px;margin-bottom:34px}
+    .download{display:inline-grid;grid-template-columns:auto 1fr;align-items:center;gap:15px;background:var(--cyan);color:#071416;border-radius:15px;padding:16px 22px;text-decoration:none;box-shadow:0 12px 40px rgba(61,219,217,.18);transition:transform .2s ease,box-shadow .2s ease}
+    .download:hover{transform:translateY(-3px);box-shadow:0 17px 50px rgba(61,219,217,.3)}
+    .download:focus-visible{outline:3px solid var(--amber);outline-offset:4px}
+    .download svg{width:28px;height:28px}
+    .download strong{display:block;font-size:1.08rem;font-weight:950;letter-spacing:.04em;line-height:1.1}
+    .download small{display:block;font-size:.75rem;font-weight:700;opacity:.66;margin-top:5px}
+    .hero-note{margin:17px 0 0;color:#70808c;font-size:.74rem}
+    .screens{height:590px;position:relative;perspective:1200px}
+    .phone{position:absolute;width:210px;aspect-ratio:412/915;background:#080b0f;border:7px solid #252e37;border-radius:30px;padding:5px;box-shadow:var(--shadow);overflow:hidden}
+    .phone::before{content:"";position:absolute;z-index:2;top:7px;left:50%;translate:-50%;width:55px;height:8px;border-radius:9px;background:#141a20}
+    .phone img{width:100%;height:100%;object-fit:cover;border-radius:19px;background:linear-gradient(145deg,#152d37,#101820 50%,#253729)}
+    .phone:nth-child(1){left:0;top:72px;transform:rotate(-8deg) translateZ(-60px)}
+    .phone:nth-child(2){left:50%;top:0;translate:-50%;z-index:3;transform:rotate(1.5deg)}
+    .phone:nth-child(3){right:0;top:84px;transform:rotate(8deg) translateZ(-70px)}
+    section{padding:112px 0}
+    .section-kicker{color:var(--amber);font-size:.75rem;font-weight:850;letter-spacing:.18em;text-transform:uppercase;margin-bottom:15px}
+    h2{font-size:clamp(2.25rem,5.2vw,4rem);line-height:1;letter-spacing:-.055em;font-weight:950;margin-bottom:20px;max-width:720px}
+    .section-intro{color:var(--muted);font-size:1.05rem;max-width:620px;margin-bottom:50px}
+    .features{border-top:1px solid var(--line)}
+    .feature-grid{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);border-left:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+    .feature{min-height:190px;padding:26px 22px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:linear-gradient(145deg,rgba(24,33,43,.9),rgba(16,22,29,.75));position:relative}
+    .feature::after{content:"";position:absolute;inset:auto 18px 0;height:2px;background:var(--cyan);transform:scaleX(0);transform-origin:left;transition:transform .3s ease}
+    .feature:hover::after{transform:scaleX(1)}
+    .feature .num{font-size:.69rem;color:#60717d;font-weight:800;letter-spacing:.12em}
+    .feature h3{font-size:1rem;line-height:1.25;letter-spacing:-.02em;margin:42px 0 0;font-weight:800}
+    .feature:nth-child(3n) .num,.feature:nth-child(7n) .num{color:var(--amber)}
+    .install-wrap{background:linear-gradient(135deg,#17242b,#10161d);border:1px solid var(--line);border-radius:30px;padding:58px;position:relative;overflow:hidden}
+    .install-wrap::after{content:"6769";position:absolute;right:-20px;top:-55px;font-weight:950;font-size:11rem;letter-spacing:-.08em;color:rgba(61,219,217,.035);pointer-events:none}
+    .steps{display:grid;grid-template-columns:repeat(3,1fr);margin-top:46px;position:relative}
+    .steps::before{content:"";position:absolute;top:25px;left:9%;right:9%;height:1px;background:var(--line)}
+    .step{position:relative;padding-right:34px}
+    .step:last-child{padding-right:0}
+    .step-num{display:grid;place-items:center;width:51px;height:51px;border:1px solid var(--cyan);border-radius:50%;background:#112027;color:var(--cyan);font-weight:900;margin-bottom:24px;position:relative;z-index:1}
+    .step h3{font-size:1.08rem;margin-bottom:7px}
+    .step p{color:var(--muted);font-size:.9rem;max-width:240px;margin:0}
+    .security{display:flex;gap:10px;align-items:center;border-top:1px solid var(--line);margin:38px 0 0;padding-top:22px;color:#8696a1;font-size:.8rem}
+    .security svg{width:16px;flex:none;color:var(--amber)}
+    footer{border-top:1px solid var(--line);padding:44px 0 54px;color:#73828d;font-size:.8rem}
+    footer .shell{display:flex;justify-content:space-between;gap:20px;align-items:center}
+    .footer-mark{color:var(--cyan);font-weight:900;letter-spacing:.08em}
+    .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.2,1)}
+    .reveal.visible{opacity:1;transform:none}
+    @media (max-width:900px){.hero{grid-template-columns:1fr;padding-top:50px}.hero-copy{text-align:center}.eyebrow{justify-content:center}.tagline{margin-inline:auto}.screens{width:min(620px,100%);margin:30px auto 0}.feature-grid{grid-template-columns:repeat(2,1fr)}.feature:last-child{grid-column:span 2}.feature{min-height:155px}.feature h3{margin-top:30px}}
+    @media (max-width:620px){.shell{width:min(100% - 28px,1100px)}.topbar{height:64px}.top-link{display:none}.hero{padding:44px 0 72px;min-height:0;gap:30px}h1{font-size:clamp(3.15rem,17vw,5rem)}.tagline{font-size:1.05rem}.download{width:100%;justify-content:center}.screens{height:440px;margin-top:4px}.phone{width:42%;border-width:5px;border-radius:22px;padding:3px}.phone:nth-child(1){left:-4%;top:64px}.phone:nth-child(2){top:20px}.phone:nth-child(3){right:-4%;top:70px}.phone::before{top:5px;width:35px;height:5px}.phone img{border-radius:14px}section{padding:78px 0}.feature-grid{grid-template-columns:1fr}.feature,.feature:last-child{grid-column:auto;min-height:126px;padding:22px}.feature h3{margin-top:22px}.install-wrap{padding:34px 24px;border-radius:22px}.steps{grid-template-columns:1fr;gap:28px;margin-top:35px}.steps::before{top:0;bottom:0;left:25px;right:auto;width:1px;height:auto}.step{display:grid;grid-template-columns:51px 1fr;column-gap:17px;padding:0}.step-num{grid-row:span 2;margin:0}.step h3{margin:4px 0}.security{align-items:flex-start}footer .shell{display:block}footer .footer-mark{display:block;margin-top:8px}}
+    @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.reveal{opacity:1;transform:none;transition:none}.download{transition:none}}
+  </style>
+</head>
+<body>
+  <header class="shell topbar">
+    <a class="brand" href="#top" aria-label="SethCity 6769 home"><img src="/icon.svg" alt=""><span>SETHCITY <span>6769</span></span></a>
+    <a class="top-link" href="#features">City systems ↓</a>
+  </header>
+  <main id="top">
+    <div class="shell hero">
+      <div class="hero-copy reveal">
+        <p class="eyebrow">The future needs a mayor</p>
+        <h1>SETHCITY <span>6769</span></h1>
+        <p class="tagline">The whole city in your pocket. Build it, run it, wreck it.</p>
+        <a class="download" href="/sethcity.apk" download aria-label="Download SethCity 6769 APK, approximately 4 megabytes, for Android 7.0 and newer">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14"/></svg>
+          <span><strong>DOWNLOAD APK</strong><small>~4 MB · Android 7.0+</small></span>
+        </a>
+        <p class="hero-note">Direct download. No account. No storefront.</p>
+      </div>
+      <div class="screens reveal" aria-label="SethCity 6769 gameplay screenshots">
+        <figure class="phone"><img src="/shot-1.png" alt="A futuristic SethCity skyline in the mobile game" width="412" height="915" onerror="this.style.opacity=0"></figure>
+        <figure class="phone"><img src="/shot-2.png" alt="Building and managing city zones in SethCity 6769" width="412" height="915" onerror="this.style.opacity=0"></figure>
+        <figure class="phone"><img src="/shot-3.png" alt="SethCity 6769 city simulation at night" width="412" height="915" onerror="this.style.opacity=0"></figure>
+      </div>
+    </div>
+    <section class="features" id="features">
+      <div class="shell">
+        <div class="reveal"><p class="section-kicker">A real city in there</p><h2>Small screen.<br>Ridiculous depth.</h2><p class="section-intro">The systems you remember from classic city builders, rebuilt for a tactile 3D world you can run from anywhere.</p></div>
+        <div class="feature-grid reveal">
+          <article class="feature"><span class="num">01</span><h3>Zones &amp; 5-level growth</h3></article>
+          <article class="feature"><span class="num">02</span><h3>9 power sources &amp; power lines</h3></article>
+          <article class="feature"><span class="num">03</span><h3>Water mains &amp; underground view</h3></article>
+          <article class="feature"><span class="num">04</span><h3>Subways, rail, highways, bridges &amp; tunnels</h3></article>
+          <article class="feature"><span class="num">05</span><h3>Disasters, including the Giant Llama</h3></article>
+          <article class="feature"><span class="num">06</span><h3>Day/night, seasons &amp; weather</h3></article>
+          <article class="feature"><span class="num">07</span><h3>Budget, bonds, ordinances &amp; advisors</h3></article>
+          <article class="feature"><span class="num">08</span><h3>The Llama Ledger newspaper</h3></article>
+          <article class="feature"><span class="num">09</span><h3>Arcologies</h3></article>
+          <article class="feature"><span class="num">10</span><h3>Sandbox mode</h3></article>
+        </div>
+      </div>
+    </section>
+    <section id="install">
+      <div class="shell install-wrap reveal">
+        <p class="section-kicker">Sideload in a minute</p>
+        <h2>How to install</h2>
+        <div class="steps">
+          <article class="step"><span class="step-num">1</span><h3>Download</h3><p>Tap the APK button and let the file finish downloading.</p></article>
+          <article class="step"><span class="step-num">2</span><h3>Allow unknown sources</h3><p>When prompted, allow installs from your browser.</p></article>
+          <article class="step"><span class="step-num">3</span><h3>Install</h3><p>Open the APK, tap Install, and start your city.</p></article>
+        </div>
+        <p class="security"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>Android asks because this app is installed directly, outside an app store. You can revoke the permission after installation.</p>
+      </div>
+    </section>
+  </main>
+  <footer><div class="shell"><span>A DSIO joint · built by a fleet of AI agents in one shot</span><span class="footer-mark">WELCOME TO 6769</span></div></footer>
+  <script>
+    (()=>{const items=document.querySelectorAll('.reveal');if(!('IntersectionObserver'in window)){items.forEach(el=>el.classList.add('visible'));return}const observer=new IntersectionObserver(entries=>{entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('visible');observer.unobserve(entry.target)}})},{threshold:.12});items.forEach(el=>observer.observe(el))})();
+  </script>
+</body>
+</html>

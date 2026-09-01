@@ -5,6 +5,7 @@ import type { GameState } from '../core/state';
 import { GRID_H, GRID_W, HEIGHT_STEP, idx, inBounds, type ActiveDisaster, type DisasterKind } from '../core/types';
 
 const flooded = new Map<number, number[]>();
+type FloodDisaster = ActiveDisaster & { floodedTiles?: number[] };
 const randomKinds: DisasterKind[] = ['fire', 'earthquake', 'tornado', 'flood', 'meteor', 'blackout', 'riot', 'volcano', 'monster', 'aircrash', 'meltdown', 'hurricane', 'chemical'];
 
 function news(state: GameState, text: string, kind: 'warn' | 'bad' = 'bad'): void {
@@ -85,7 +86,11 @@ export function triggerDisaster(state: GameState, kind: DisasterKind, x?: number
   a.vx = rnd() * 2 - 1; a.vy = rnd() * 2 - 1;
   state.disasters.push(a);
   if (kind === 'fire') ignite(state, px, py, 28);
-  if (kind === 'flood' || kind === 'hurricane') flooded.set(a.id, []);
+  if (kind === 'flood' || kind === 'hurricane') {
+    const list: number[] = [];
+    (a as FloodDisaster).floodedTiles = list;
+    flooded.set(a.id, list);
+  }
   const labels: Record<DisasterKind, string> = { fire: 'A major fire has broken out!', earthquake: 'Earthquake rocks SethCity 6769!', tornado: 'A tornado is tearing through the city!', flood: 'Flood waters surge inland!', meteor: 'Meteor impact reported!', blackout: 'City-wide blackout!', riot: 'Rioting erupts in a high-crime district!', volcano: 'A volcano erupts beneath the city!', monster: 'The Giant Llama of 6769 is on a rampage!', aircrash: 'Aircraft down near the airport!', meltdown: 'Nuclear meltdown! The exclusion zone is irradiated.', hurricane: 'A hurricane batters the coast!', chemical: 'Chemical spill poisons the shoreline!' };
   news(state, labels[kind]);
   bus.emit('shake', { intensity: kind === 'earthquake' || kind === 'meteor' ? 1 : 0.55 });
@@ -128,8 +133,10 @@ function tickDisaster(state: GameState, a: ActiveDisaster): void {
   } else if (a.kind === 'flood' || a.kind === 'hurricane') {
     // This bookkeeping is intentionally transient and therefore absent after
     // loading a save made mid-disaster. Recreate it before the first tick.
-    let list = flooded.get(a.id);
-    if (!list) { list = []; flooded.set(a.id, list); }
+    let list = (a as FloodDisaster).floodedTiles ?? flooded.get(a.id);
+    if (!list) list = [];
+    (a as FloodDisaster).floodedTiles = list;
+    flooded.set(a.id, list);
     for (let n = 0; n < (a.kind === 'hurricane' ? 10 : 18); n++) {
       const x = Math.round(a.x + (rnd() - 0.5) * 24), y = Math.round(a.y + (rnd() - 0.5) * 24);
       if (!inBounds(x, y)) continue; const i = idx(x, y);
@@ -157,7 +164,7 @@ export function updateDisasters(state: GameState): void {
   for (let n = state.disasters.length - 1; n >= 0; n--) {
     const a = state.disasters[n]; tickDisaster(state, a); a.life--;
     if (a.life > 0) continue;
-    const water = flooded.get(a.id);
+    const water = (a as FloodDisaster).floodedTiles ?? flooded.get(a.id);
     if (water) { for (const i of water) { state.grid.water[i] = 0; state.grid.markDirty(i % GRID_W, (i / GRID_W) | 0); } flooded.delete(a.id); state.grid.terrainDirty = true; }
     state.disasters.splice(n, 1); bus.emit('disaster:end', { id: a.id });
   }

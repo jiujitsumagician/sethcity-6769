@@ -40,10 +40,44 @@ export class Actions {
     const minX = Math.max(0, Math.min(x0, x1)), maxX = Math.min(127, Math.max(x0, x1)), minY = Math.max(0, Math.min(y0, y1)), maxY = Math.min(127, Math.max(y0, y1));
     const points: [number, number][] = []; const line = tool.startsWith('road_') || tool === 'rail' || tool === 'wire' || tool === 'pipe' || tool === 'subway';
     if (line) { const horiz = Math.abs(x1 - x0) >= Math.abs(y1 - y0); if (horiz) { const step = x1 >= x0 ? 1 : -1; for (let x = x0; x !== x1 + step; x += step) if (inBounds(x, y0)) points.push([x, y0]); const sy = y1 >= y0 ? 1 : -1; for (let y = y0 + sy; y !== y1 + sy; y += sy) if (inBounds(x1, y)) points.push([x1, y]); } else { const sy = y1 >= y0 ? 1 : -1; for (let y = y0; y !== y1 + sy; y += sy) if (inBounds(x0, y)) points.push([x0, y]); const sx = x1 >= x0 ? 1 : -1; for (let x = x0 + sx; x !== x1 + sx; x += sx) if (inBounds(x, y1)) points.push([x, y1]); } } else for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) points.push([x, y]);
-    let raw = 0, valid = 0; const endpoint = (this.state.grid.height[idx(x0, y0)] + this.state.grid.height[idx(x1, y1)]) * 0.5;
-    for (const [x, y] of points) { const i = idx(x, y); let p = tool.startsWith('zone_') ? (ZONE_COST[ZONES[tool.slice(5)]] ?? 0) : BASE[tool] ?? 0; if ((tool.startsWith('road_') || tool === 'rail') && this.state.grid.water[i]) p *= 5; if (tool.startsWith('road_') && this.state.grid.height[i] >= endpoint + 2 * HEIGHT_STEP) p = 12 * 8; raw += p; valid++; }
+    if (!points.length) return { ok: false, cost: 0, reason: 'Outside city limits', tiles: 0 };
+    const g = this.state.grid;
+    for (const [x, y] of points) {
+      const i = idx(x, y);
+      if ((tool.startsWith('road_') || tool === 'rail' || tool === 'water_place') && g.building[i])
+        return { ok: false, cost: 0, reason: 'Building in the way', tiles: 0 };
+      if (tool === 'water_place' && (g.road[i] || g.rail[i]))
+        return { ok: false, cost: 0, reason: 'Transport route in the way', tiles: 0 };
+    }
+    /* zone/tree rects paint around obstacles (SC2K-style) instead of refusing */
+    if (tool.startsWith('zone_') || tool === 'tree') {
+      const paintable = points.filter(([x, y]) => {
+        const i = idx(x, y);
+        return !g.building[i] && !g.road[i] && !g.rail[i] && !g.water[i];
+      });
+      if (!paintable.length)
+        return { ok: false, cost: 0, reason: 'Nothing to paint here', tiles: 0 };
+      points.length = 0;
+      for (const p of paintable) points.push(p);
+    }
+    let raw = 0, valid = 0;
+    const first = points[0], last = points[points.length - 1];
+    const endpoint = (g.height[idx(first[0], first[1])] + g.height[idx(last[0], last[1])]) * 0.5;
+    const dozed = new Set<number>();
+    for (const [x, y] of points) {
+      const i = idx(x, y);
+      let p = tool.startsWith('zone_') ? (ZONE_COST[ZONES[tool.slice(5)]] ?? 0) : BASE[tool] ?? 0;
+      if (tool === 'bulldoze') {
+        // charge only for tiles that hold something; a multi-tile building
+        // costs one fee no matter how many of its tiles the drag covers
+        const o = g.originOf(x, y);
+        if (o >= 0) { if (dozed.has(o)) p = 0; else dozed.add(o); }
+        else if (!g.road[i] && !g.rail[i] && !g.wire[i] && !g.pipe[i] && !g.zone[i] && !g.tree[i]) p = 0;
+      }
+      if ((tool.startsWith('road_') || tool === 'rail') && this.state.grid.water[i]) p *= 5; if (tool.startsWith('road_') && this.state.grid.height[i] >= endpoint + 2 * HEIGHT_STEP) p = 12 * 8; raw += p; valid++;
+    }
     const cost = this.scale(raw); if (this.state.difficulty !== 'sandbox' && this.state.budget.funds < cost) return { ok: false, cost, reason: 'Insufficient funds', tiles: valid }; if (preview) return { ok: true, cost, tiles: valid }; if (!this.spend(cost)) return { ok: false, cost, reason: 'Insufficient funds', tiles: valid };
-    for (const [x, y] of points) { const i = idx(x, y), g = this.state.grid; if (tool === 'bulldoze') this.bulldozeTile(x, y); else if (tool.startsWith('zone_')) g.zone[i] = ZONES[tool.slice(5)] ?? Zone.None; else if (tool === 'road_street') { g.road[i] = RoadType.Street; g.tunnel[i] = !g.water[i] && g.height[i] >= endpoint + 2 * HEIGHT_STEP ? 1 : 0; } else if (tool === 'road_avenue') { g.road[i] = RoadType.Avenue; g.tunnel[i] = !g.water[i] && g.height[i] >= endpoint + 2 * HEIGHT_STEP ? 1 : 0; } else if (tool === 'road_highway') { g.road[i] = RoadType.Highway; g.tunnel[i] = !g.water[i] && g.height[i] >= endpoint + 2 * HEIGHT_STEP ? 1 : 0; } else if (tool === 'rail') g.rail[i] = 1; else if (tool === 'wire') g.wire[i] = 1; else if (tool === 'pipe') g.pipe[i] = 1; else if (tool === 'subway') g.subway[i] = 1; else if (tool === 'tree') g.tree[i] = Math.min(3, g.tree[i] + 1); else if (tool === 'water_place') { g.water[i] = 1; g.height[i] = SEA_LEVEL - HEIGHT_STEP; g.terrainDirty = true; } else if (tool.startsWith('terrain_')) { terraform(g, x, y, 0, tool.slice(8) as 'raise' | 'lower' | 'level', tool === 'terrain_level' ? g.height[idx(x0, y0)] : undefined); g.terrainDirty = true; } else if (tool === 'sign' && this.pendingSignText) { this.state.signs.push({ x, y, text: this.pendingSignText.slice(0, 24) }); this.pendingSignText = null; } g.markDirty(x, y); bus.emit('tile:changed', { i }); }
+    for (const [x, y] of points) { const i = idx(x, y); if (tool === 'bulldoze') this.bulldozeTile(x, y); else if (tool.startsWith('zone_')) g.zone[i] = ZONES[tool.slice(5)] ?? Zone.None; else if (tool === 'road_street') { g.zone[i] = 0; g.tree[i] = 0; g.road[i] = RoadType.Street; g.tunnel[i] = !g.water[i] && g.height[i] >= endpoint + 2 * HEIGHT_STEP ? 1 : 0; } else if (tool === 'road_avenue') { g.zone[i] = 0; g.tree[i] = 0; g.road[i] = RoadType.Avenue; g.tunnel[i] = !g.water[i] && g.height[i] >= endpoint + 2 * HEIGHT_STEP ? 1 : 0; } else if (tool === 'road_highway') { g.zone[i] = 0; g.tree[i] = 0; g.road[i] = RoadType.Highway; g.tunnel[i] = !g.water[i] && g.height[i] >= endpoint + 2 * HEIGHT_STEP ? 1 : 0; } else if (tool === 'rail') { g.zone[i] = 0; g.tree[i] = 0; g.rail[i] = 1; } else if (tool === 'wire') g.wire[i] = 1; else if (tool === 'pipe') g.pipe[i] = 1; else if (tool === 'subway') g.subway[i] = 1; else if (tool === 'tree') g.tree[i] = Math.min(3, g.tree[i] + 1); else if (tool === 'water_place') { g.zone[i] = 0; g.tree[i] = 0; g.water[i] = 1; g.height[i] = SEA_LEVEL - HEIGHT_STEP; g.terrainDirty = true; } else if (tool.startsWith('terrain_')) { terraform(g, x, y, 0, tool.slice(8) as 'raise' | 'lower' | 'level', tool === 'terrain_level' ? g.height[idx(first[0], first[1])] : undefined); g.terrainDirty = true; } else if (tool === 'sign' && this.pendingSignText) { this.state.signs.push({ x, y, text: this.pendingSignText.slice(0, 24) }); this.pendingSignText = null; } g.markDirty(x, y); bus.emit('tile:changed', { i }); }
     return { ok: true, cost, tiles: valid };
   }
 }

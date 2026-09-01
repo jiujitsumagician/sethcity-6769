@@ -73,15 +73,15 @@ await tapCat('Zones');
 console.log('drawer(Zones): ' + JSON.stringify((await dumpDrawer()).slice(0, 20)));
 await page.getByRole('button', { name: /Res.*Low|Low.*Res|Residential/i }).first().tap();
 await page.waitForTimeout(300);
-await dragLine(80, 440, 330, 400, 10);  // rect drag (picker treats as rect)
+await dragLine(60, 455, 350, 420, 10);  // rect hugging the road's north side
 await tapCat('Zones');
 await page.getByRole('button', { name: /Com/i }).first().tap();
 await page.waitForTimeout(300);
-await dragLine(80, 520, 190, 560, 8);
+await dragLine(60, 500, 200, 540, 8);
 await tapCat('Zones');
 await page.getByRole('button', { name: /Ind/i }).first().tap();
 await page.waitForTimeout(300);
-await dragLine(230, 520, 340, 560, 8);
+await dragLine(215, 500, 350, 540, 8);
 await page.screenshot({ path: `${SHOTS}/21-zones.png` });
 
 // POWER + WATER: place via the actions hook at exact road-adjacent tiles

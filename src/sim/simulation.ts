@@ -7,6 +7,7 @@ import { computeTraffic } from './traffic';
 import { computeDemand, recomputeStats, monthlyBudget, checkMilestones } from './economy';
 import { growAndDecay } from './zoning';
 import { publishPaper } from './newspaper';
+import { updateDisasters } from './disasters';
 
 const RATES = [0, 1, 3, 9] as const;
 
@@ -29,6 +30,7 @@ export class Simulation {
     else if (this.phase === 2) computeFields(s);
     else computeTraffic(s);
     this.phase = (this.phase + 1) & 3;
+    updateDisasters(s);
     growAndDecay(s);
     recomputeStats(s);
     checkMilestones(s);
