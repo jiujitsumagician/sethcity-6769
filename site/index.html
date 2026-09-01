@@ -79,7 +79,10 @@
     @media (max-width:900px){.hero{grid-template-columns:1fr;padding-top:50px}.hero-copy{text-align:center}.eyebrow{justify-content:center}.tagline{margin-inline:auto}.screens{width:min(620px,100%);margin:30px auto 0}.feature-grid{grid-template-columns:repeat(2,1fr)}.feature:last-child{grid-column:span 2}.feature{min-height:155px}.feature h3{margin-top:30px}}
     @media (max-width:620px){.shell{width:min(100% - 28px,1100px)}.topbar{height:64px}.top-link{display:none}.hero{padding:44px 0 72px;min-height:0;gap:30px}h1{font-size:clamp(3.15rem,17vw,5rem)}.tagline{font-size:1.05rem}.download{width:100%;justify-content:center}.screens{height:440px;margin-top:4px}.phone{width:42%;border-width:5px;border-radius:22px;padding:3px}.phone:nth-child(1){left:-4%;top:64px}.phone:nth-child(2){top:20px}.phone:nth-child(3){right:-4%;top:70px}.phone::before{top:5px;width:35px;height:5px}.phone img{border-radius:14px}section{padding:78px 0}.feature-grid{grid-template-columns:1fr}.feature,.feature:last-child{grid-column:auto;min-height:126px;padding:22px}.feature h3{margin-top:22px}.install-wrap{padding:34px 24px;border-radius:22px}.steps{grid-template-columns:1fr;gap:28px;margin-top:35px}.steps::before{top:0;bottom:0;left:25px;right:auto;width:1px;height:auto}.step{display:grid;grid-template-columns:51px 1fr;column-gap:17px;padding:0}.step-num{grid-row:span 2;margin:0}.step h3{margin:4px 0}.security{align-items:flex-start}footer .shell{display:block}footer .footer-mark{display:block;margin-top:8px}}
     @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.reveal{opacity:1;transform:none;transition:none}.download{transition:none}}
-  </style>
+  .download.play{background:transparent;color:#3ddbd9;border:2px solid rgba(61,219,217,.55);box-shadow:none;margin-top:14px}
+.download.play:hover{border-color:#3ddbd9;background:rgba(61,219,217,.08)}
+.download.play small{color:rgba(61,219,217,.75)}
+</style>
 </head>
 <body>
   <header class="shell topbar">
@@ -92,9 +95,13 @@
         <p class="eyebrow">The future needs a mayor</p>
         <h1>SETHCITY <span>6769</span></h1>
         <p class="tagline">The whole city in your pocket. Build it, run it, wreck it.</p>
-        <a class="download" href="/sethcity.apk" download aria-label="Download SethCity 6769 APK, approximately 4 megabytes, for Android 7.0 and newer">
+        <a class="download" href="/sethcity.apk" download aria-label="Download SethCity 6769 APK, 0.7 megabytes, for Android 7.0 and newer">
           <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14"/></svg>
-          <span><strong>DOWNLOAD APK</strong><small>0.7 MB Â· Android 7.0+</small></span>
+          <span><strong>DOWNLOAD APK</strong><small>0.7 MB · Android 7.0+</small></span>
+        </a>
+        <a class="download play" href="/play/" aria-label="Play SethCity 6769 in your browser">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5v15l13-7.5z"/></svg>
+          <span><strong>PLAY IN BROWSER</strong><small>Nothing to install &middot; phone or desktop</small></span>
         </a>
         <p class="hero-note">Direct download. No account. No storefront.</p>
       </div>
@@ -134,7 +141,7 @@
       </div>
     </section>
   </main>
-  <footer><div class="shell"><span>A DSIO joint Â· built by a fleet of AI agents in one shot</span><span class="footer-mark">WELCOME TO 6769</span></div></footer>
+  <footer><div class="shell"><span>A DSIO joint · built by a fleet of AI agents in one shot</span><span class="footer-mark">WELCOME TO 6769</span></div></footer>
   <script>
     (()=>{const items=document.querySelectorAll('.reveal');if(!('IntersectionObserver'in window)){items.forEach(el=>el.classList.add('visible'));return}const observer=new IntersectionObserver(entries=>{entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('visible');observer.unobserve(entry.target)}})},{threshold:.12});items.forEach(el=>observer.observe(el))})();
   </script>
