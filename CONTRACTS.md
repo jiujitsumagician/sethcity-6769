@@ -657,3 +657,41 @@ all charges. Advisors are pure functions — the UI polls `getAdvice`.
 
 When you finish, report: files written, anything you had to deviate on, and any assumption
 another module must honour.
+
+---
+
+# INTEGRATION NOTES (facts already locked in by finished modules — honour these)
+
+From **A2** (sim/network.ts, services.ts, fields.ts, traffic.ts — DONE):
+- `grid.powered[i]` is 1 on live conductors AND a one-tile 4-neighbour halo, then
+  overridden per building footprint (browned-out buildings stamp 0). An empty zoned lot
+  beside a live road reads powered — zoning may test `grid.powered[i]` / `grid.watered[i]`
+  directly on 1×1 growth candidates.
+- `isConnected(grid,x,y)` = a road tile of the largest component within Chebyshev 3 —
+  exactly the zoning road-access rule. Use it.
+- Zoning MUST stamp `grid.population` per residential tile (traffic reads it), initialise
+  `condition > 0` and `age = 0` on spawn; "abandoned" is detected as
+  `def.grown && condition === 0 && age > 4`.
+- Water producers only feed mains when powered. Brown-outs consider network-connected
+  consumers; stats power/waterDemand report totals.
+- Ordinance field effects (recycling, clean_air, smoke_detectors, neighborhood_watch,
+  legalise_gambling) are applied inside computeFields — do NOT double-apply them.
+- Tiles with pollution ≥ 200 decay slowly (radiation); disasters can stamp 255 once and it
+  lingers for years.
+- Per-tick call order: propagateUtilities → computeCoverage → computeFields.
+  `grid.scratchA/scratchB` are free for any module's use.
+- Traffic: commuter volume = pop×0.42, transit halves it; capacities 120/312/720 per tile.
+
+From **A4** (render/renderer.ts, weather.ts, overlays.ts — DONE):
+- Renderer writes `scene.userData.quality` = 'low'|'medium'|'high' each quality change;
+  Weather reads it. No other module may overwrite that key.
+- Overlay DataTexture: flipY=false, data index `(y*128+x)*4`, sample at uv = worldXZ/128,
+  linear colour, texel alpha premultiplies the mix; strength 0.85 normal / 1.0 underground.
+- Renderer.render offsets camera.position during shake and restores after the draw —
+  CameraController must not cache camera.position across frames outside its own update.
+- updateSky is called before render every frame (main.ts does this).
+- Underground overlay derives producer squares from CATALOG (waterOut>0 or key 't_subway').
+
+For **render/terrainMesh.ts**: the file exists but was cut off mid-write (missing tail).
+Its owner must READ what is there and complete/repair it to the A1 contract, keeping the
+overlay conventions above.
