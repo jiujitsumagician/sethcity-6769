@@ -159,6 +159,9 @@ const host = {
   ) {
     world?.terrainR.setHighlight(r);
   },
+  onHighlightPath(tiles: { x: number; y: number }[] | null, valid: boolean) {
+    world?.terrainR.setHighlightTiles(tiles, valid);
+  },
   onSelect(i: number | null) {
     ui?.showTileInspector(i);
     bus.emit('select:tile', i === null ? null : { i });
@@ -241,6 +244,9 @@ async function boot() {
 
     controls.update(dt, state.grid);
     w.sim.update(dt);
+    /* day/night cycle is opt-in (player prefers permanent daytime) */
+    if (localStorage.getItem('sethcity:daynight') !== 'on')
+      state.time.timeOfDay = 0.42;
     weather.update(dt, state.time);
     renderer.updateSky(state.time, weather.state);
 

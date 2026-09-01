@@ -215,6 +215,9 @@ export class TerrainRenderer {
   private sunSearched = false;
   private sunRetry = 0;
   private disposed = false;
+  private highlightTiles: THREE.InstancedMesh;
+  private highlightMat: THREE.MeshBasicMaterial;
+  private highlightMatrix = new THREE.Matrix4();
   /** water depth/shore texture needs a rebuild before the next frame */
   private infoDirty = true;
 
@@ -237,6 +240,23 @@ export class TerrainRenderer {
     this.gu.uOverlay.value = this.blankTex;
 
     this.groundMat = this.makeGroundMaterial();
+
+    const highlightGeo = new THREE.PlaneGeometry(0.82, 0.82);
+    highlightGeo.rotateX(-Math.PI / 2);
+    this.highlightMat = new THREE.MeshBasicMaterial({
+      color: 0x3ce07f,
+      transparent: true,
+      opacity: 0.34,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    });
+    this.highlightTiles = new THREE.InstancedMesh(highlightGeo, this.highlightMat, 256);
+    this.highlightTiles.count = 0;
+    this.highlightTiles.renderOrder = 4;
+    this.highlightTiles.frustumCulled = false;
+    this.highlightTiles.name = 'build-path-preview';
 
     this.infoData = new Uint8Array(GRID_W * GRID_H * 4);
     this.infoTex = new THREE.DataTexture(
@@ -282,6 +302,7 @@ export class TerrainRenderer {
     this.waterMesh.updateMatrixWorld(true);
 
     this.group.add(this.waterMesh);
+    this.group.add(this.highlightTiles);
     this.scene.add(this.group);
   }
 
@@ -397,6 +418,13 @@ export class TerrainRenderer {
     // altitude tint + per-tile brightness jitter
     const l = g.height[i] / HEIGHT_STEP;
     out.multiplyScalar(lerp(0.95, 1.08, clamp01(l / 20)) * (0.94 + 0.12 * hash2(tx, ty, 17)));
+    // Permanent SC2K-style paint on zoned, undeveloped ground. Developed
+    // tiles retain their building/lot palette instead of becoming fluorescent.
+    if (g.zone[i] && !g.building[i]) {
+      const zone = g.zone[i];
+      tmpColorB.setHex(zone <= 3 ? 0x43b85a : zone <= 6 ? 0x438bd1 : 0xd59f35);
+      out.lerp(tmpColorB, 0.22);
+    }
   }
 
   /* ──────────────────────────── mesh building ──────────────────────────── */
@@ -675,6 +703,9 @@ export class TerrainRenderer {
     if (this.infoDirty) this.refreshWaterInfo();
 
     this.gu.uTime.value = elapsed;
+    if (this.highlightTiles.count) {
+      this.highlightMat.opacity = 0.29 + 0.08 * (0.5 + 0.5 * Math.sin(elapsed * 4.2));
+    }
 
     const wu = this.waterMat.uniforms;
     wu.uTime.value = elapsed;
@@ -735,6 +766,22 @@ export class TerrainRenderer {
     this.gu.uHighlightOn.value = 1;
   }
 
+  /** One flat, terrain-following quad per line-tool tile (pooled, no churn). */
+  setHighlightTiles(tiles: { x: number; y: number }[] | null, valid: boolean): void {
+    const count = Math.min(tiles?.length ?? 0, 256);
+    for (let i = 0; i < count; i++) {
+      const tile = tiles![i];
+      const ti = tile.y * GRID_W + tile.x;
+      const surface = this.grid.water[ti] ? SEA_LEVEL + 0.08 : this.grid.height[ti] + 0.025;
+      this.highlightMatrix.makeTranslation(tile.x + 0.5, surface, tile.y + 0.5);
+      this.highlightTiles.setMatrixAt(i, this.highlightMatrix);
+    }
+    this.highlightTiles.count = count;
+    this.highlightTiles.instanceMatrix.needsUpdate = count > 0;
+    this.highlightMat.color.setHex(valid ? 0x3ce07f : 0xf04a52);
+    this.highlightTiles.visible = count > 0;
+  }
+
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
@@ -748,6 +795,9 @@ export class TerrainRenderer {
       }
     }
     this.group.remove(this.waterMesh);
+    this.group.remove(this.highlightTiles);
+    this.highlightTiles.geometry.dispose();
+    this.highlightMat.dispose();
     (this.waterMesh.geometry as THREE.BufferGeometry).dispose();
     this.waterMat.dispose();
     this.groundMat.dispose();

@@ -783,6 +783,10 @@ function resetGrid(grid: Grid): void {
   grid.zone.fill(0);
   grid.road.fill(0);
   grid.rail.fill(0);
+  grid.wire.fill(0);
+  grid.pipe.fill(0);
+  grid.subway.fill(0);
+  grid.tunnel.fill(0);
   grid.building.fill(0);
   grid.originOffset.fill(0);
   grid.level.fill(0);

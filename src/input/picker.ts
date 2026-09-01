@@ -9,6 +9,7 @@ export interface PickerHost {
   controls: CameraController;
   overUI(x: number, y: number): boolean;
   onHighlight(r: { x0: number; y0: number; x1: number; y1: number; valid: boolean } | null): void;
+  onHighlightPath?(tiles: { x: number; y: number }[] | null, valid: boolean): void;
   onSelect(i: number | null): void;
   sfx(name: string): void;
   toast(msg: string, kind?: 'info' | 'warn' | 'bad'): void;
@@ -17,6 +18,24 @@ export interface PickerHost {
 }
 
 const dragTool = (t: ToolId) => t === 'bulldoze' || t === 'tree' || t.startsWith('zone_') || t.startsWith('road_') || t === 'rail' || t === 'wire' || t === 'pipe' || t === 'subway';
+const lineTool = (t: ToolId) => t.startsWith('road_') || t === 'rail' || t === 'wire' || t === 'pipe' || t === 'subway';
+
+function linePoints(x0: number, y0: number, x1: number, y1: number): { x: number; y: number }[] {
+  const points: { x: number; y: number }[] = [];
+  const horiz = Math.abs(x1 - x0) >= Math.abs(y1 - y0);
+  if (horiz) {
+    const sx = x1 >= x0 ? 1 : -1;
+    for (let x = x0; x !== x1 + sx; x += sx) points.push({ x, y: y0 });
+    const sy = y1 >= y0 ? 1 : -1;
+    for (let y = y0 + sy; y !== y1 + sy; y += sy) points.push({ x: x1, y });
+  } else {
+    const sy = y1 >= y0 ? 1 : -1;
+    for (let y = y0; y !== y1 + sy; y += sy) points.push({ x: x0, y });
+    const sx = x1 >= x0 ? 1 : -1;
+    for (let x = x0 + sx; x !== x1 + sx; x += sx) points.push({ x, y: y1 });
+  }
+  return points;
+}
 
 export class Picker {
   private pointer: number | null = null;
@@ -79,7 +98,21 @@ export class Picker {
 
   private preview(): void {
     const r = this.host.actions.applyTool(this.tool, this.x0, this.y0, this.x1, this.y1, true);
+    if (lineTool(this.tool)) {
+      const pathHandler = (this.host as any).onHighlightPath as
+        ((tiles: { x: number; y: number }[] | null, valid: boolean) => void) | undefined;
+      if (pathHandler) {
+        this.host.onHighlight(null);
+        pathHandler(linePoints(this.x0, this.y0, this.x1, this.y1), r.ok);
+        return;
+      }
+    }
     this.host.onHighlight({ x0: this.x0, y0: this.y0, x1: this.x1, y1: this.y1, valid: r.ok });
+  }
+
+  private clearHighlight(): void {
+    this.host.onHighlight(null);
+    (this.host as any).onHighlightPath?.(null, true);
   }
 
   private selectTile(x: number, y: number): void {
@@ -95,7 +128,7 @@ export class Picker {
     if (this.host.controls.gesturing || this.longPressed) { this.abort(); return; }
     const tool = this.tool;
     const x0 = this.x0, y0 = this.y0, x1 = dragTool(tool) ? this.x1 : this.x0, y1 = dragTool(tool) ? this.y1 : this.y0;
-    this.pointer = null; this.host.controls.enabled = true; this.host.onHighlight(null);
+    this.pointer = null; this.host.controls.enabled = true; this.clearHighlight();
     if (tool === 'inspect') { if (!this.moved) this.selectTile(x0, y0); return; }
     if (tool === 'sign') { void this.placeSign(x0, y0, e.clientX, e.clientY); return; }
     this.apply(tool, x0, y0, x1, y1, e.clientX, e.clientY);
@@ -114,7 +147,7 @@ export class Picker {
     else { this.host.sfx('error'); this.host.toast(r.reason ?? 'Cannot place here', 'warn'); }
   }
 
-  private abort(): void { clearTimeout(this.timer); this.pointer = null; this.host.controls.enabled = true; this.host.onHighlight(null); }
+  private abort(): void { clearTimeout(this.timer); this.pointer = null; this.host.controls.enabled = true; this.clearHighlight(); }
   private onCancel = (e: PointerEvent) => { if (e.pointerId === this.pointer) this.abort(); };
   update(): void { if (this.pointer !== null && this.host.controls.gesturing) this.abort(); }
   dispose(): void { this.abort(); this.dom.removeEventListener('pointerdown', this.onDown); this.dom.removeEventListener('pointermove', this.onMove); this.dom.removeEventListener('pointerup', this.onUp); this.dom.removeEventListener('pointercancel', this.onCancel); }

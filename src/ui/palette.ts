@@ -21,8 +21,9 @@ export class Palette {
   private active: DrawerCategory | null = null;
   private pressTimer = 0;
   private readonly offs: (() => void)[] = [];
+  private overlayBeforeTool: GameState['overlay'] | null = null;
 
-  constructor(private readonly state: () => GameState) {
+  constructor(private readonly state: () => GameState, private readonly hint: (message: string) => void) {
     this.element = document.createElement('div'); this.element.className='drawer'; this.element.dataset.ui='';
     this.element.innerHTML='<div class="drawer-items"></div><div class="drawer-cats"></div><div class="tool-chip"><span class="ic"></span><span class="tool-name"></span><button class="x" aria-label="Cancel tool">×</button></div>';
     const rail=this.q('.drawer-cats');
@@ -35,6 +36,7 @@ export class Palette {
 
   private chooseCategory(id: DrawerCategory): void {
     if (id==='bulldoze') { this.select('bulldoze','Bulldoze'); return; }
+    this.showCategoryHint(id);
     this.active=this.active===id?null:id; this.element.classList.toggle('expanded',!!this.active);
     this.element.querySelectorAll('.d-cat').forEach((e)=>e.classList.toggle('on',(e as HTMLElement).dataset.cat===this.active)); this.refreshItems();
   }
@@ -73,7 +75,49 @@ export class Palette {
   }
   private isUnlocked(item: Item,s:GameState): boolean { if(s.difficulty==='sandbox'||!item.unlockPop)return !item.key||!item.key.startsWith('x_')||item.cost>0||s.unlocked.has(item.key); return s.stats.population>=item.unlockPop||!!item.key&&s.unlocked.has(item.key); }
   private describe(item:Item,anchor:HTMLElement):void { this.element.parentElement?.querySelector('.d-desc')?.remove(); const d=document.createElement('div'); d.className='d-desc'; d.innerHTML='<b></b><div class="sub"></div>'; d.querySelector('b')!.textContent=item.name; d.querySelector('.sub')!.textContent=item.desc; const r=anchor.getBoundingClientRect(); d.style.left=`${Math.max(8,Math.min(innerWidth-258,r.left))}px`; d.style.bottom=`${innerHeight-r.top+8}px`; this.element.parentElement?.append(d); setTimeout(()=>d.remove(),2800); }
-  private select(tool:ToolId,name:string):void { const s=this.state(); s.tool=tool; bus.emit('tool:changed',{tool}); this.active=null; this.element.classList.remove('expanded'); this.updateChip(name); }
+  private select(tool:ToolId,name:string):void {
+    const s=this.state();
+    if (tool === 'inspect') {
+      if (this.overlayBeforeTool !== null) {
+        s.overlay = this.overlayBeforeTool;
+        bus.emit('overlay:changed', { overlay: s.overlay });
+        this.overlayBeforeTool = null;
+      }
+    } else {
+      const overlay = this.overlayForTool(tool);
+      if (overlay && overlay !== s.overlay) {
+        if (this.overlayBeforeTool === null) this.overlayBeforeTool = s.overlay;
+        s.overlay = overlay;
+        bus.emit('overlay:changed', { overlay });
+      }
+    }
+    s.tool=tool; bus.emit('tool:changed',{tool}); this.active=null; this.element.classList.remove('expanded'); this.updateChip(name);
+  }
+  private overlayForTool(tool: ToolId): GameState['overlay'] | null {
+    if (tool.startsWith('zone_')) return 'zones';
+    if (tool === 'pipe' || tool === 'subway') return 'underground';
+    if (tool === 'wire' || tool.startsWith('build_p_')) return 'power';
+    if (tool.startsWith('build_w_')) return 'water';
+    return null;
+  }
+  private showCategoryHint(id: DrawerCategory): void {
+    const messages: Partial<Record<DrawerCategory, string>> = {
+      zones: 'Paint next to a road — homes need road, power and water to grow.',
+      roads: 'Drag roads to connect districts; avenues and highways carry more traffic.',
+      power: 'Generate power, then carry it with roads or power lines.',
+      water: 'Pumps need shoreline; pipes and roads water tiles within four spaces.',
+      transport: 'Rail moves above ground; subway tunnels are easiest to read underground.',
+      terrain: 'Shape land carefully — steep ground can block large buildings.'
+    };
+    const message = messages[id];
+    if (!message) return;
+    const key = `sethcity:hint:${id}`;
+    try {
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, 'shown');
+    } catch { /* Hints still work when storage is unavailable. */ }
+    this.hint(message);
+  }
   private updateChip(name?:string):void { const tool=this.state().tool; const chip=this.q('.tool-chip'); chip.classList.toggle('show',tool!=='inspect'); const item=this.allItems().find(i=>i.tool===tool); this.q('.tool-name').textContent=name??item?.name??friendlyToolName(tool); this.q('.tool-chip .ic').innerHTML=glyph(item?.archetype??'terrain'); }
   private q(sel:string):HTMLElement{return this.element.querySelector(sel) as HTMLElement;}
 }

@@ -10,8 +10,8 @@
  *  - bridges wherever a road/rail tile sits on water: arched continuous spans,
  *    concrete deck, railings and piers down into the water,
  *  - tunnel portals where a tunnel run meets open road (nothing on the hilltop),
- *  - lattice power pylons on grid.wire tiles with drooping catenary wires
- *    between 4-connected neighbours (taller over water),
+ *  - slim land power poles at four-tile intervals with paired catenary wires;
+ *    lattice pylons are reserved for water crossings,
  *  - streetlight pools: emissive patches on the tarmac that fade in at night
  *    via a uNight uniform (no real lights),
  *  - one merged vertex-coloured mesh per 16x16 chunk.
@@ -69,6 +69,8 @@ const C_BALLAST_D = C(0x655f54);
 const C_SLEEPER = C(0x574739);
 const C_RAILS = C(0x9aa2ab);
 const C_PYLON = C(0x939ba1);
+const C_POLE = C(0x665044);
+const C_ARM = C(0x4e4540);
 const C_WIRE = C(0x26282c);
 const C_STONE = C(0x9b9489);
 const C_STONE_D = C(0x7c766c);
@@ -418,7 +420,11 @@ export class RoadRenderer {
   private scene: THREE.Scene;
   private grid: Grid;
   private meshes: (THREE.Mesh | null)[];
+  private pipeMeshes: (THREE.InstancedMesh | null)[];
   private material: THREE.MeshLambertMaterial;
+  private pipeGeometry: THREE.CylinderGeometry;
+  private pipeMaterial: THREE.MeshLambertMaterial;
+  private markerMatrix = new THREE.Matrix4();
   private uNight = { value: 0 };
   private bridgeQueued = new Set<number>();
 
@@ -426,6 +432,7 @@ export class RoadRenderer {
     this.scene = scene;
     this.grid = grid;
     this.meshes = new Array<THREE.Mesh | null>(CHUNKS_X * CHUNKS_Y).fill(null);
+    this.pipeMeshes = new Array<THREE.InstancedMesh | null>(CHUNKS_X * CHUNKS_Y).fill(null);
     this.material = new THREE.MeshLambertMaterial({ vertexColors: true });
     const uNight = this.uNight;
     this.material.onBeforeCompile = (shader) => {
@@ -444,6 +451,8 @@ export class RoadRenderer {
         );
     };
     this.material.customProgramCacheKey = () => 'sethcity-roads';
+    this.pipeGeometry = new THREE.CylinderGeometry(0.105, 0.105, 0.025, 10);
+    this.pipeMaterial = new THREE.MeshLambertMaterial({ color: 0x4c9fd1 });
   }
 
   rebuildAll(): void {
@@ -477,8 +486,11 @@ export class RoadRenderer {
 
   dispose(): void {
     for (let i = 0; i < this.meshes.length; i++) this.removeMesh(i);
+    for (let i = 0; i < this.pipeMeshes.length; i++) this.removePipeMesh(i);
     this.bridgeQueued.clear();
     this.material.dispose();
+    this.pipeGeometry.dispose();
+    this.pipeMaterial.dispose();
   }
 
   /* ────────────────────────── chunk building ──────────────────────────────── */
@@ -502,9 +514,42 @@ export class RoadRenderer {
     this.meshes[ci] = null;
   }
 
+  private removePipeMesh(ci: number): void {
+    const mesh = this.pipeMeshes[ci];
+    if (!mesh) return;
+    this.scene.remove(mesh);
+    this.pipeMeshes[ci] = null;
+  }
+
+  private buildPipeMarkers(cx: number, cy: number): void {
+    const ci = cy * CHUNKS_X + cx;
+    this.removePipeMesh(ci);
+    const mesh = new THREE.InstancedMesh(this.pipeGeometry, this.pipeMaterial, CHUNK * CHUNK);
+    let count = 0;
+    const x0 = cx * CHUNK, y0 = cy * CHUNK;
+    for (let y = y0; y < y0 + CHUNK; y++) for (let x = x0; x < x0 + CHUNK; x++) {
+      const i = idx(x, y);
+      if (!this.grid.pipe[i] || this.grid.water[i]) continue;
+      // Offset alternating covers to read as a dashed utility trace without
+      // competing with roads or zoning paint.
+      const ox = (x + y) & 1 ? 0.32 : 0.68;
+      this.markerMatrix.makeTranslation(x + ox, this.grid.height[i] + 0.045, y + 0.5);
+      mesh.setMatrixAt(count++, this.markerMatrix);
+    }
+    if (!count) return;
+    mesh.count = count;
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.name = `pipe-access-${cx}-${cy}`;
+    mesh.receiveShadow = false;
+    mesh.castShadow = false;
+    this.scene.add(mesh);
+    this.pipeMeshes[ci] = mesh;
+  }
+
   private buildChunk(cx: number, cy: number): void {
     const ci = cy * CHUNKS_X + cx;
     this.removeMesh(ci);
+    this.buildPipeMarkers(cx, cy);
     const g = this.grid;
     const acc = new Acc();
     const x0 = cx * CHUNK, y0 = cy * CHUNK;
@@ -1040,41 +1085,30 @@ export class RoadRenderer {
     const hasEW = connE || connW;
     const hasNS = connN || connS;
 
-    // lattice tower: 4 tapering legs, X-braces, crossarms, spike
-    const legT = 0.021;
-    for (const sx of [-1, 1])
-      for (const sz of [-1, 1])
+    if (g.water[idx(x, y)]) {
+      // Water crossings retain a recognisable tall steel lattice support.
+      const legT = 0.021;
+      for (const sx of [-1, 1]) for (const sz of [-1, 1])
         acc.bar(cx + sx * 0.17, a.base, cz + sz * 0.17, cx + sx * 0.05, a.arm, cz + sz * 0.05, legT, C_PYLON, shade);
-    const midY = a.base + (a.arm - a.base) * 0.45;
-    const midR = 0.115;
-    // X braces on all four faces at mid height
-    for (const [px, pz, qx, qz] of [
-      [-1, -1, 1, -1], [1, -1, 1, 1], [1, 1, -1, 1], [-1, 1, -1, -1],
-    ] as const) {
-      acc.bar(cx + px * 0.16, a.base + 0.12, cz + pz * 0.16, cx + qx * midR, midY, cz + qz * midR, 0.012, C_PYLON, shade * 0.9);
-      acc.bar(cx + qx * 0.16, a.base + 0.12, cz + qz * 0.16, cx + px * midR, midY, cz + pz * midR, 0.012, C_PYLON, shade * 0.9);
+      const midY = a.base + (a.arm - a.base) * 0.45;
+      for (const [px, pz, qx, qz] of [[-1, -1, 1, 1], [1, -1, -1, 1]] as const)
+        acc.bar(cx + px * 0.15, a.base + 0.12, cz + pz * 0.15, cx + qx * 0.09, midY, cz + qz * 0.09, 0.012, C_PYLON, shade);
+    } else {
+      // Telephone-pole scale on land: one slim mast, no skyline clutter.
+      acc.bar(cx, a.base, cz, cx, a.top, cz, 0.035, C_POLE, shade);
     }
-    // ring at mid height
-    acc.bar(cx - midR, midY, cz - midR, cx + midR, midY, cz - midR, 0.012, C_PYLON, shade);
-    acc.bar(cx + midR, midY, cz - midR, cx + midR, midY, cz + midR, 0.012, C_PYLON, shade);
-    acc.bar(cx + midR, midY, cz + midR, cx - midR, midY, cz + midR, 0.012, C_PYLON, shade);
-    acc.bar(cx - midR, midY, cz + midR, cx - midR, midY, cz - midR, 0.012, C_PYLON, shade);
-    // crossarms perpendicular to the line runs
-    if (hasEW || !hasNS)
-      acc.bar(cx, a.arm, cz - 0.33, cx, a.arm, cz + 0.33, 0.026, C_PYLON, shade);
-    if (hasNS)
-      acc.bar(cx - 0.33, a.arm, cz, cx + 0.33, a.arm, cz, 0.026, C_PYLON, shade);
-    acc.bar(cx, a.arm, cz, cx, a.top + 0.16, cz, 0.018, C_PYLON, shade);
+    if (hasEW || !hasNS) acc.bar(cx, a.arm, cz - 0.28, cx, a.arm, cz + 0.28, 0.022, g.water[idx(x, y)] ? C_PYLON : C_ARM, shade);
+    if (hasNS) acc.bar(cx - 0.28, a.arm, cz, cx + 0.28, a.arm, cz, 0.022, g.water[idx(x, y)] ? C_PYLON : C_ARM, shade);
 
     // Spans are owned by their west/north pylon and may cross chunk boundaries.
-    // Search only three tiles: periodic towers plus structural endpoints ensure
+    // Search four tiles: periodic poles plus structural endpoints ensure
     // that every straight run is covered without a per-tile picket fence.
     if (connE) {
-      for (let d = 1; d <= 3 && wireAt(g, x + d, y); d++)
+      for (let d = 1; d <= 4 && wireAt(g, x + d, y); d++)
         if (this.isPylonTile(x + d, y)) { this.span(acc, x, y, x + d, y, 0); break; }
     }
     if (connS) {
-      for (let d = 1; d <= 3 && wireAt(g, x, y + d); d++)
+      for (let d = 1; d <= 4 && wireAt(g, x, y + d); d++)
         if (this.isPylonTile(x, y + d)) { this.span(acc, x, y, x, y + d, 1); break; }
     }
   }
@@ -1090,23 +1124,9 @@ export class RoadRenderer {
     const wet = g.water[idx(x, y)] === 1;
     for (const [nx, ny, connected] of [[x + 1, y, e], [x - 1, y, w], [x, y - 1, n], [x, y + 1, s]] as const)
       if (connected && (g.water[idx(nx, ny)] === 1) !== wet) return true;
-    // Anchor the cadence to the preceding structural tower so arbitrary runs
-    // still end with a short, properly supported final span.
-    const dx = e && w ? -1 : 0;
-    const dy = n && s ? -1 : 0;
-    let distance = 0;
-    let px = x, py = y;
-    while (distance < 3) {
-      px += dx; py += dy; distance++;
-      if (!wireAt(g, px, py)) return false;
-      const pe = wireAt(g, px + 1, py), pw = wireAt(g, px - 1, py);
-      const pn = wireAt(g, px, py - 1), ps = wireAt(g, px, py + 1);
-      const pd = Number(pe) + Number(pw) + Number(pn) + Number(ps);
-      const straight = pd === 2 && ((pe && pw) || (pn && ps));
-      const waterTransition = (g.water[idx(px, py)] === 1) !== wet;
-      if (!straight || waterTransition) return distance === 3;
-    }
-    return true;
+    // Global cadence guarantees no straight span exceeds four tiles; structural
+    // endpoints/corners above close arbitrary-length runs cleanly.
+    return e && w ? x % 4 === 0 : y % 4 === 0;
   }
 
   private span(

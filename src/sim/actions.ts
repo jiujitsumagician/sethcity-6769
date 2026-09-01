@@ -16,12 +16,28 @@ export class Actions {
   constructor(private state: GameState) {}
   private scale(n: number): number { return Math.ceil(n * (this.state.difficulty === 'easy' ? 0.8 : this.state.difficulty === 'hard' ? 1.25 : 1)); }
   spend(amount: number): boolean { if (this.state.difficulty === 'sandbox') return true; if (this.state.budget.funds < amount) return false; this.state.budget.funds -= amount; return true; }
+  private waterSiteIsClear(d: BuildingDef, x: number, y: number): boolean {
+    const g = this.state.grid;
+    for (let yy = 0; yy < d.h; yy++) for (let xx = 0; xx < d.w; xx++) {
+      const i = idx(x + xx, y + yy);
+      if (g.building[i] || g.road[i] || g.rail[i]) return false;
+      if (g.water[i] && g.height[i] < SEA_LEVEL - 2 * HEIGHT_STEP - 0.001) return false;
+    }
+    return true;
+  }
+  private footprintTouchesWater(d: BuildingDef, x: number, y: number): boolean {
+    const g = this.state.grid;
+    for (let yy = 0; yy < d.h; yy++) for (let xx = 0; xx < d.w; xx++) {
+      if (g.water[idx(x + xx, y + yy)]) return true;
+    }
+    return g.touchesWater(x, y, d.w, d.h);
+  }
   canPlace(key: string, x: number, y: number): ToolResult {
     const d = BY_KEY[key]; if (!d) return { ok: false, cost: 0, reason: 'Unknown building', tiles: 0 };
     const cost = this.scale(d.cost); if (!inBounds(x, y) || !inBounds(x + d.w - 1, y + d.h - 1)) return { ok: false, cost, reason: 'Outside city limits', tiles: 0 };
     if (!unlockedKeys(this.state).has(key)) return { ok: false, cost, reason: 'Not unlocked', tiles: 0 };
-    if (!this.state.grid.isClear(x, y, d.w, d.h)) return { ok: false, cost, reason: 'Site is occupied', tiles: 0 };
-    if (d.needsWater && !this.state.grid.touchesWater(x, y, d.w, d.h)) return { ok: false, cost, reason: 'Must touch water', tiles: 0 };
+    if (d.needsWater ? !this.waterSiteIsClear(d, x, y) : !this.state.grid.isClear(x, y, d.w, d.h)) return { ok: false, cost, reason: 'Site is occupied or the water is too deep', tiles: 0 };
+    if (d.needsWater && !this.footprintTouchesWater(d, x, y)) return { ok: false, cost, reason: 'Must touch water', tiles: 0 };
     if (d.needsFlat && !this.state.grid.isFlat(x, y, d.w, d.h)) {
       let min = Infinity, max = -Infinity;
       for (let yy = 0; yy < d.h; yy++) for (let xx = 0; xx < d.w; xx++) { const h = this.state.grid.height[idx(x + xx, y + yy)]; min = Math.min(min, h); max = Math.max(max, h); }
@@ -30,7 +46,7 @@ export class Actions {
     if (this.state.difficulty !== 'sandbox' && this.state.budget.funds < cost) return { ok: false, cost, reason: 'Insufficient funds', tiles: 0 };
     return { ok: true, cost, tiles: d.w * d.h };
   }
-  private stamp(d: BuildingDef, x: number, y: number): void { const g = this.state.grid, variant = ((x * 37 + y * 71 + this.state.seed) & 255), rotation = d.w === d.h ? ((x + y + this.state.seed) & 3) : 0; for (let yy = 0; yy < d.h; yy++) for (let xx = 0; xx < d.w; xx++) { const i = idx(x + xx, y + yy); g.building[i] = d.id; g.originOffset[i] = xx | yy << 4; g.level[i] = d.level ?? 1; g.variant[i] = variant; g.rotation[i] = rotation; g.condition[i] = 255; g.age[i] = 0; g.population[i] = 0; g.jobs[i] = d.residents > 0 ? 0 : Math.round(d.jobs / (d.w * d.h)); g.markDirty(x + xx, y + yy); } bus.emit('tile:changed', { i: idx(x, y) }); }
+  private stamp(d: BuildingDef, x: number, y: number): void { const g = this.state.grid, variant = ((x * 37 + y * 71 + this.state.seed) & 255), rotation = d.w === d.h ? ((x + y + this.state.seed) & 3) : 0; for (let yy = 0; yy < d.h; yy++) for (let xx = 0; xx < d.w; xx++) { const i = idx(x + xx, y + yy); if (d.needsWater) { g.height[i] = SEA_LEVEL; g.tree[i] = 0; g.terrainDirty = true; } g.building[i] = d.id; g.originOffset[i] = xx | yy << 4; g.level[i] = d.level ?? 1; g.variant[i] = variant; g.rotation[i] = rotation; g.condition[i] = 255; g.age[i] = 0; g.population[i] = 0; g.jobs[i] = d.residents > 0 ? 0 : Math.round(d.jobs / (d.w * d.h)); g.markDirty(x + xx, y + yy); } bus.emit('tile:changed', { i: idx(x, y) }); }
   place(key: string, x: number, y: number): ToolResult { const r = this.canPlace(key, x, y); if (!r.ok) return r; const d = BY_KEY[key]; if (d.needsFlat && !this.state.grid.isFlat(x, y, d.w, d.h) && !flattenFor(this.state.grid, x, y, d.w, d.h)) return { ...r, ok: false, reason: 'Terrain cannot be flattened' }; if (!this.spend(r.cost)) return { ...r, ok: false, reason: 'Insufficient funds' }; this.stamp(d, x, y); bus.emit('money:spent', { amount: r.cost, x, y, label: d.name }); return r; }
   bulldozeTile(x: number, y: number): number { const g = this.state.grid; if (!inBounds(x, y)) return 0; const o = g.originOf(x, y); let changed = 0; if (o >= 0) { const d = defOf(g.building[o]); const ox = o % GRID_W, oy = (o / GRID_W) | 0; const w = d.w, h = d.h; for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) { g.clearTile(idx(ox + xx, oy + yy)); g.markDirty(ox + xx, oy + yy); changed++; } bus.emit('tile:changed', { i: o }); return changed; } const i = idx(x, y); if (g.road[i] || g.rail[i] || g.wire[i] || g.pipe[i] || g.subway[i] || g.zone[i] || g.tree[i]) { g.road[i] = g.rail[i] = g.wire[i] = g.pipe[i] = g.subway[i] = g.tunnel[i] = g.zone[i] = g.tree[i] = 0; g.markDirty(x, y); bus.emit('tile:changed', { i }); return 1; } return 0; }
   applyTool(tool: ToolId, x0: number, y0: number, x1: number, y1: number, preview: boolean): ToolResult {

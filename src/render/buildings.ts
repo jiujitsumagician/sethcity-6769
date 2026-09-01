@@ -16,6 +16,7 @@ import {
   CHUNK,
   CHUNKS_X,
   CHUNKS_Y,
+  SEA_LEVEL,
   idx,
   tx,
   ty,
@@ -2372,6 +2373,14 @@ const BUILDERS: Record<BuildingDef['archetype'], Builder> = {
   rubble: bRubble,
 };
 
+function buildingBaseY(grid: Grid, i: number): number {
+  const def = defOf(grid.building[i]);
+  const x = tx(i), y = ty(i);
+  for (let yy = 0; yy < def.h; yy++) for (let xx = 0; xx < def.w; xx++)
+    if (grid.water[idx(x + xx, y + yy)]) return SEA_LEVEL;
+  return grid.height[i];
+}
+
 function buildOne(s: GeoSink, grid: Grid, i: number, collect = true) {
   const id = grid.building[i];
   if (!id) return;
@@ -2396,7 +2405,7 @@ function buildOne(s: GeoSink, grid: Grid, i: number, collect = true) {
   // outside the tiles stamped by the simulation.  Preserve rotation only when
   // it cannot change the occupied bounds.
   const renderRotation = def.w === def.h ? grid.rotation[i] : 0;
-  s.setFrame(x, grid.height[i], z, def.w, def.h, renderRotation);
+  s.setFrame(x, buildingBaseY(grid, i), z, def.w, def.h, renderRotation);
   s.collect = collect;
   const v0 = s.v;
   const anim0 = pendingAnims.length;
@@ -2586,12 +2595,13 @@ export class BuildingRenderer {
     const cx = tx(origin) + def.w * 0.5;
     const cz = ty(origin) + def.h * 0.5;
     // Geometry is already in world space; scale around the footprint centre.
-    mesh.geometry.translate(-cx, -this.grid.height[origin], -cz);
-    mesh.position.set(cx, this.grid.height[origin], cz);
+    const baseY = buildingBaseY(this.grid, origin);
+    mesh.geometry.translate(-cx, -baseY, -cz);
+    mesh.position.set(cx, baseY, cz);
     mesh.scale.setScalar(0.02);
     mesh.castShadow = true;
     this.scene.add(mesh);
-    this.pops.push({ i: origin, t: 0, mesh, baseY: this.grid.height[origin] });
+    this.pops.push({ i: origin, t: 0, mesh, baseY });
   }
 
   dispose(): void {

@@ -1724,6 +1724,16 @@ input[type='range']::-moz-range-thumb {
 /* ─────────────────────────── responsive tweaks ───────────────────────────── */
 
 @media (max-width: 420px) {
+  .hud-top {
+    gap: 3px;
+    padding-left: calc(var(--sal) + 4px);
+    padding-right: calc(var(--sar) + 4px);
+  }
+  .pill { min-height: 36px; padding: 0 8px; }
+  .hud-face { display: none; }
+  .speed-group button { width: 34px; min-height: 38px; font-size: 12px; }
+  .icon-btn { width: 38px; min-height: 38px; }
+  .sheet-body { padding-left: 12px; padding-right: 12px; }
   .hud-date .date-txt {
     display: none;
   }
@@ -1733,6 +1743,14 @@ input[type='range']::-moz-range-thumb {
   .rci-bar {
     height: 30px;
   }
+}
+
+@media (max-width: 380px) {
+  .hud-date,
+  .hud-pop { display: none; }
+  .speed-group button { width: 32px; }
+  .icon-btn { width: 36px; }
+  .range-row { grid-template-columns: 82px minmax(90px, 1fr) 42px; gap: 6px; }
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
@@ -1770,6 +1788,8 @@ input[type='range']::-moz-range-thumb {
   .sheet.open {
     transform: translate(0, 0);
   }
+  .sheet-body { padding-bottom: calc(var(--sab) + 10px); }
+  .bottom-stack { max-width: calc(100% - 430px); }
   .coach-card {
     left: auto;
     right: 12px;
@@ -1786,6 +1806,31 @@ input[type='range']::-moz-range-thumb {
 }
 
 /* Runtime-composed controls */
+.manual {
+  padding-bottom: 8px;
+  line-height: 1.45;
+}
+.manual-intro {
+  margin: 8px 0 16px;
+  color: var(--dim);
+}
+.manual section {
+  padding: 4px 0 10px;
+  border-top: 1px solid var(--line);
+}
+.manual h3 {
+  margin: 12px 0 6px;
+  color: var(--accent);
+  font-size: 15px;
+}
+.manual ul {
+  margin: 0;
+  padding-left: 20px;
+}
+.manual li {
+  margin: 5px 0;
+}
+
 .range-row {
   display: grid;
   grid-template-columns: minmax(82px, 1fr) minmax(110px, 2fr) 48px;

@@ -173,7 +173,8 @@ const GradeShader = {
   uniforms: {
     tDiffuse: { value: null as THREE.Texture | null },
     uResolution: { value: new THREE.Vector2(1, 1) },
-    uMaxBlur: { value: 2.6 },
+    /* tilt-shift blur removed by player request — everything stays sharp */
+    uMaxBlur: { value: 0 },
     uFocusY: { value: 0.44 },
     uBand: { value: 0.13 },
     uVignette: { value: 0.42 },
@@ -425,7 +426,7 @@ export class Renderer {
     }
     if (this.grade) {
       (this.grade.uniforms.uResolution.value as THREE.Vector2).set(w * pr, h * pr);
-      this.grade.uniforms.uMaxBlur.value = 2.6 * pr;
+      this.grade.uniforms.uMaxBlur.value = 0; // tilt-shift off — full-map focus
     }
   }
 
