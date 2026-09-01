@@ -175,6 +175,12 @@ const host = {
 /* ───────────────────────────── bus wiring ─────────────────────────────── */
 
 bus.on('shake', ({ intensity }) => renderer.shake(intensity));
+bus.on('news', (n) => {
+  if (!world) return;
+  world.state.news.push(n);
+  if (world.state.news.length > 60)
+    world.state.news.splice(0, world.state.news.length - 60);
+});
 
 /* test/debug hook — read-only view of the live state */
 Object.defineProperty(window, '__sethcity', {

@@ -126,7 +126,10 @@ function tickDisaster(state: GameState, a: ActiveDisaster): void {
     const radius = a.kind === 'monster' ? 2 : 1;
     for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) if (rnd() < 0.72) destroy(state, Math.round(a.x) + dx, Math.round(a.y) + dy);
   } else if (a.kind === 'flood' || a.kind === 'hurricane') {
-    const list = flooded.get(a.id)!;
+    // This bookkeeping is intentionally transient and therefore absent after
+    // loading a save made mid-disaster. Recreate it before the first tick.
+    let list = flooded.get(a.id);
+    if (!list) { list = []; flooded.set(a.id, list); }
     for (let n = 0; n < (a.kind === 'hurricane' ? 10 : 18); n++) {
       const x = Math.round(a.x + (rnd() - 0.5) * 24), y = Math.round(a.y + (rnd() - 0.5) * 24);
       if (!inBounds(x, y)) continue; const i = idx(x, y);

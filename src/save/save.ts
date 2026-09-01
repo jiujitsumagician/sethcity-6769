@@ -37,9 +37,12 @@ function encodeArray(a: ArrayBufferView): EncodedArray {
 }
 
 function copyArray(target: ArrayBufferView, encoded: unknown): void {
-  if (!encoded || typeof encoded !== 'object' || !('data' in encoded) || typeof (encoded as EncodedArray).data !== 'string') return;
-  const bytes = base64ToBytes((encoded as EncodedArray).data);
-  new Uint8Array(target.buffer, target.byteOffset, target.byteLength).set(bytes.subarray(0, target.byteLength));
+  if (!encoded || typeof encoded !== 'object') throw new Error('Missing grid array');
+  const value = encoded as Partial<EncodedArray>;
+  if (value.type !== target.constructor.name || typeof value.data !== 'string') throw new Error('Invalid grid array');
+  const bytes = base64ToBytes(value.data);
+  if (bytes.byteLength !== target.byteLength) throw new Error('Invalid grid array length');
+  new Uint8Array(target.buffer, target.byteOffset, target.byteLength).set(bytes);
 }
 
 export function serialize(state: GameState): string {
@@ -49,9 +52,9 @@ export function serialize(state: GameState): string {
   const body: Record<string, unknown> = {
     seed: state.seed, cityName: state.cityName, mayorName: state.mayorName, difficulty: state.difficulty,
     grid, time: state.time, speed: state.speed, budget: state.budget, stats: state.stats, demand: state.demand,
-    ordinances: state.ordinances, milestones: state.milestones, disasters: state.disasters, vehicles: [],
+    ordinances: state.ordinances, milestones: state.milestones, disasters: state.disasters, vehicles: state.vehicles,
     news: state.news.slice(-50), papers: state.papers, signs: state.signs, deals: state.deals, history: state.history,
-    tool: 'inspect', overlay: 'none', unlocked: [...state.unlocked], nextDisasterId: state.nextDisasterId,
+    tool: state.tool, overlay: state.overlay, unlocked: [...state.unlocked], nextDisasterId: state.nextDisasterId,
     nextNewsId: state.nextNewsId, tutorialStep: state.tutorialStep, disastersEnabled: state.disastersEnabled,
   };
   const envelope: Envelope = { v: 1, savedAt, meta: { name: state.cityName, pop: state.stats.population, funds: state.budget.funds, date: savedAt, year: state.time.year }, state: body };
@@ -78,13 +81,14 @@ export function deserialize(json: string): GameState {
   state.ordinances = objectValue(s, 'ordinances', state.ordinances);
   state.milestones = objectValue(s, 'milestones', state.milestones);
   state.disasters = objectValue(s, 'disasters', []);
-  state.vehicles = [];
+  state.vehicles = objectValue(s, 'vehicles', []);
   state.news = objectValue<GameState['news']>(s, 'news', []).slice(-50);
   state.papers = objectValue(s, 'papers', []);
   state.signs = objectValue(s, 'signs', []);
   state.deals = objectValue(s, 'deals', state.deals);
   state.history = { ...state.history, ...objectValue(s, 'history', {}) };
-  state.tool = 'inspect'; state.overlay = 'none';
+  state.tool = objectValue(s, 'tool', state.tool);
+  state.overlay = objectValue(s, 'overlay', state.overlay);
   state.unlocked = new Set(objectValue<string[]>(s, 'unlocked', []));
   state.nextDisasterId = objectValue(s, 'nextDisasterId', state.nextDisasterId);
   state.nextNewsId = objectValue(s, 'nextNewsId', state.nextNewsId);
