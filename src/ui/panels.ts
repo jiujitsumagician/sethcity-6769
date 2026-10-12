@@ -355,7 +355,7 @@ export class Panels {
         (d.kind.startsWith('sell') || d.kind === 'take_garbage' ? 1 : -1);
       const row = document.createElement('div');
       row.className = 'row';
-      row.innerHTML = `<div class="grow"><div class="lbl">${title(d.kind)} · ${d.neighbor}</div><div class="sub">${money(cash)} / month</div></div><button class="tgl ${d.active ? 'on' : ''}" aria-label="Toggle deal"><i></i></button>`;
+      row.innerHTML = `<div class="grow"><div class="lbl">${title(d.kind)} · ${esc(d.neighbor)}</div><div class="sub">${money(cash)} / month</div></div><button class="tgl ${d.active ? 'on' : ''}" aria-label="Toggle deal"><i></i></button>`;
       row.querySelector('button')!.addEventListener('click', (e) => {
         d.active = !d.active;
         (e.currentTarget as HTMLElement).classList.toggle('on', d.active);
@@ -422,7 +422,7 @@ export class Panels {
       const p = Math.min(100, (s.stats.population / m.pop) * 100);
       body.insertAdjacentHTML(
         'beforeend',
-        `<div class="mile ${m.reached ? 'done' : ''}"><div class="top"><span class="nm">${m.name}</span><span class="target">${m.pop.toLocaleString()}</span></div><div class="desc">${m.desc}</div><div class="bar"><i style="width:${p}%"></i></div></div>`,
+        `<div class="mile ${m.reached ? 'done' : ''}"><div class="top"><span class="nm">${esc(m.name)}</span><span class="target">${m.pop.toLocaleString()}</span></div><div class="desc">${esc(m.desc)}</div><div class="bar"><i style="width:${p}%"></i></div></div>`,
       );
     });
     body.insertAdjacentHTML('beforeend', '<div class="sec">Ordinances</div>');
@@ -430,7 +430,7 @@ export class Panels {
       const locked = !!o.unlockPop && s.stats.population < o.unlockPop;
       const row = document.createElement('div');
       row.className = 'row';
-      row.innerHTML = `<div class="grow"><div class="lbl">${o.name}</div><div class="sub">${o.desc} · ${money(-o.costPerCapita * s.stats.population)}/mo${locked ? ` · unlock ${o.unlockPop!.toLocaleString()}` : ''}</div></div><button class="tgl ${o.active ? 'on' : ''}" ${locked ? 'disabled' : ''}><i></i></button>`;
+      row.innerHTML = `<div class="grow"><div class="lbl">${esc(o.name)}</div><div class="sub">${esc(o.desc)} · ${money(-o.costPerCapita * s.stats.population)}/mo${locked ? ` · unlock ${o.unlockPop!.toLocaleString()}` : ''}</div></div><button class="tgl ${o.active ? 'on' : ''}" ${locked ? 'disabled' : ''}><i></i></button>`;
       row.querySelector('button')!.onclick = (event) => {
         o.active = !o.active;
         (event.currentTarget as HTMLElement).classList.toggle('on', o.active);
@@ -478,7 +478,7 @@ export class Panels {
       getAdvice(this.host.state).forEach((a) => {
         const e = document.createElement('div');
         e.className = `adv m-${a.mood}`;
-        e.innerHTML = `<div class="portrait">${a.advisor.slice(0, 1).toUpperCase()}</div><div><div class="who"><b>${a.name}</b><span class="role">${a.advisor}</span><span class="mood-tag m-${a.mood}">${a.mood}</span></div><div class="say"></div></div>`;
+        e.innerHTML = `<div class="portrait">${esc(a.advisor.slice(0, 1).toUpperCase())}</div><div><div class="who"><b>${esc(a.name)}</b><span class="role">${esc(a.advisor)}</span><span class="mood-tag m-${esc(a.mood)}">${esc(a.mood)}</span></div><div class="say"></div></div>`;
         (e.querySelector('.say') as HTMLElement).textContent = a.text;
         body.append(e);
       });
@@ -496,7 +496,7 @@ export class Panels {
     }
     this.paperIndex = Math.min(this.paperIndex, papers.length - 1);
     const p = papers[this.paperIndex];
-    body.innerHTML = `<div class="paper-wrap"><article class="paper-sheet"><div class="paper-mast">${p.masthead || 'The Llama Ledger'}</div><div class="paper-dateline"><span>SETHCITY 6769</span><span>${p.month + 1}/${p.year}</span></div><h2 class="paper-headline">${p.headline}</h2>${p.articles.map((a) => `<section class="paper-article"><h4>${a.title}</h4><p>${a.body}</p></section>`).join('')}<div class="paper-classified"><b>Classified</b> — ${p.classified}</div></article><div class="paper-nav"><button class="btn sm prev">Newer</button><span class="ed">Edition ${this.paperIndex + 1} of ${papers.length}</span><button class="btn sm next">Older</button></div></div>`;
+    body.innerHTML = `<div class="paper-wrap"><article class="paper-sheet"><div class="paper-mast">${esc(p.masthead || 'The Llama Ledger')}</div><div class="paper-dateline"><span>SETHCITY 6769</span><span>${p.month + 1}/${p.year}</span></div><h2 class="paper-headline">${esc(p.headline)}</h2>${p.articles.map((a) => `<section class="paper-article"><h4>${esc(a.title)}</h4><p>${esc(a.body)}</p></section>`).join('')}<div class="paper-classified"><b>Classified</b> — ${esc(p.classified)}</div></article><div class="paper-nav"><button class="btn sm prev">Newer</button><span class="ed">Edition ${this.paperIndex + 1} of ${papers.length}</span><button class="btn sm next">Older</button></div></div>`;
     (body.querySelector('.prev') as HTMLButtonElement).disabled =
       this.paperIndex === 0;
     (body.querySelector('.next') as HTMLButtonElement).disabled =
@@ -579,7 +579,7 @@ export class Panels {
     body.append(manual);
     body.insertAdjacentHTML(
       'beforeend',
-      `<div class="sec">Save game</div><div class="row"><div class="grow"><div class="lbl">${s.cityName}</div><div class="sub">${title(s.difficulty)} ${s.difficulty === 'sandbox' ? '· ∞ funds' : ''}</div></div><button class="btn save-now">Save now</button></div><div class="save-list"></div>`,
+      `<div class="sec">Save game</div><div class="row"><div class="grow"><div class="lbl">${esc(s.cityName)}</div><div class="sub">${title(s.difficulty)} ${s.difficulty === 'sandbox' ? '· ∞ funds' : ''}</div></div><button class="btn save-now">Save now</button></div><div class="save-list"></div>`,
     );
     body.querySelector('.save-now')!.addEventListener(
       'click',
@@ -598,7 +598,7 @@ export class Panels {
       saves.forEach((meta) => {
         const row = document.createElement('div');
         row.className = 'save-row';
-        row.innerHTML = `<div class="meta"><b>${meta.name}</b><div class="sub">Pop ${meta.pop.toLocaleString()} · §${meta.funds.toLocaleString()}</div></div><button class="btn sm load">Load</button><button class="btn sm danger del">Delete</button>`;
+        row.innerHTML = `<div class="meta"><b>${esc(meta.name)}</b><div class="sub">Pop ${meta.pop.toLocaleString()} · §${meta.funds.toLocaleString()}</div></div><button class="btn sm load">Load</button><button class="btn sm danger del">Delete</button>`;
         row.querySelector('.load')!.addEventListener(
           'click',
           () =>
@@ -926,6 +926,13 @@ export class Panels {
 }
 const title = (s: string) =>
   s.replaceAll('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+const esc = (v: unknown): string =>
+  String(v ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 const money = (v: number) =>
   `${v < 0 ? '−' : '+'}§${Math.abs(Math.round(v)).toLocaleString()}`;

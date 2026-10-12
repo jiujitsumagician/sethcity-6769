@@ -70,8 +70,10 @@ export function deserialize(json: string): GameState {
   if (parsed.v !== 1 || !parsed.state || typeof parsed.state !== 'object') throw new Error('Unsupported or invalid save');
   const s = parsed.state;
   const state = createState(objectValue(s, 'seed', 0), objectValue(s, 'difficulty', 'normal'));
-  state.cityName = objectValue(s, 'cityName', state.cityName);
-  state.mayorName = objectValue(s, 'mayorName', state.mayorName);
+  const savedCity = objectValue<unknown>(s, 'cityName', state.cityName);
+  state.cityName = typeof savedCity === 'string' ? savedCity.slice(0, 32) : state.cityName;
+  const savedMayor = objectValue<unknown>(s, 'mayorName', state.mayorName);
+  state.mayorName = typeof savedMayor === 'string' ? savedMayor.slice(0, 32) : state.mayorName;
   state.time = { ...state.time, ...objectValue(s, 'time', {}) };
   state.speed = objectValue(s, 'speed', state.speed);
   const savedBudget = objectValue<Partial<GameState['budget']>>(s, 'budget', {});
